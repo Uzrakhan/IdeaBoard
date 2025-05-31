@@ -1,54 +1,44 @@
-# React + TypeScript + Vite
+IdeaBoard 🚀
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+IdeaBoard is a collaborative digital whiteboard application designed for teams to brainstorm, organize ideas, and visualize concepts in real-time. Perfect for remote teams, classrooms, or creative workshops.
 
-Currently, two official plugins are available:
+✨ Key Features
+- Real-time Collaboration - Multiple users editing simultaneously
+- Sticky Notes System - Color-coded digital notes with text formatting
+- Drawing Tools - Freehand drawing with customizable brushes
+- Templates Library - Pre-built templates for common workflows
+- Version History - Track changes and revert to previous states
+- Export Options - Save boards as PNG, PDF, or JSON
+- Responsive Design - Works on desktop, tablet, and mobile
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-## Expanding the ESLint configuration
+🛠️ Tech Stack
+Frontend: React,TypeScript
+Tailwind CSS
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Backend: Node.js, Express, Socket.IO
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+Installation
+1. Clone the repository:
+git clone https://github.com/Uzrakhan/IdeaBoard.git
+cd IdeaBoard
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+2. Install dependencies:
+npm install
+cd frontend && npm install
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+3. Create .env file in root directory
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
+4. Start the development server:
+cd frontend
+npm run dev
+
+and 
+cd backend 
+npm start
+
+Contact
+Project Maintainer: Uzrakhan
+Email: uzrakhan539@gmail.com
+
+Check out our live demo: https://idea-board-virid.vercel.app/
