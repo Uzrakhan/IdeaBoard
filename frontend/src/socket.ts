@@ -7,9 +7,13 @@ export const socket = io('http://localhost:5000', {
 });
 */
 
+//use different path in development, will be different in production
+const SOCKET_URL = import.meta.env.DEV
+? 'http://localhost:5000'
+: 'https://idea-board-virid.vercel.app/';
 
-export const socket = io({
-  path: '/socket.io',
+
+export const socket = io(SOCKET_URL, {
   withCredentials: true,
   autoConnect: true,
   transports: ['websocket', 'polling'] 

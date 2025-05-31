@@ -42,6 +42,7 @@ type DrawingLine = {
 
 let drawingLines: DrawingLine[] = [];
 
+//Connection handler
 io.on('connection', (socket) => {
     console.log('New client connected:', socket.id);
 
@@ -49,7 +50,10 @@ io.on('connection', (socket) => {
     socket.emit('initial-state', drawingLines);
 
     socket.on('draw', (line: DrawingLine) => {
+        // Add the new line segment to our drawing
         drawingLines.push(line);
+
+        // Broadcast to all other clients
         socket.broadcast.emit('draw', line);
     });
 
