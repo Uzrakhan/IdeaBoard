@@ -7,14 +7,29 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const app = express();
-app.use(cors({origin: process.env.CLIENT_URL}));
+app.use(cors({origin: process.env.CLIENT_URL, credentials: true}));
+
+/*
+app.use(cors({
+  origin: "http://localhost:5173",  
+  credentials: true
+}));
+*/
+
+app.get('/health', (req,res) => {
+    res.status(200).send('OK');
+})
+
 const server = http.createServer(app);
 
 const io = new Server(server, {
     cors: {
         origin: process.env.CLIENT_URL,
-        methods: ["GET", "POST"]
-    }
+        allowedHeaders: ["Content-Type", "Authorization"],
+        methods: ["GET", "POST"],
+        credentials: true
+    },
+    transports: ['websocket', 'polling']
 });
 
 type Point = { x: number, y : number };
@@ -47,6 +62,8 @@ io.on('connection', (socket) => {
             console.log('Client disconnected:', socket.id);
     });
 })
+
+
 
 
 const PORT = process.env.PORT || 5000;
