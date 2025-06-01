@@ -14,7 +14,6 @@
     "license": "ISC",
     "type": "commonjs",
     "dependencies": {
-        "@types/lowdb": "^1.0.15",
         "cors": "^2.8.5",
         "dotenv": "^16.5.0",
         "express": "^5.1.0",
@@ -27,6 +26,7 @@
         "@types/node": "^22.15.29",
         "@types/socket.io": "^3.0.1",
         "ts-node": "^10.9.2",
-        "typescript": "^5.8.3"
+        "typescript": "^5.8.3",
+        "@types/lowdb": "^1.0.15"
     }
 }
