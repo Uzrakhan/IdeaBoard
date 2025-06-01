@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import express from 'express';
 import * as http from 'http';
 import { Server, Socket } from 'socket.io';
