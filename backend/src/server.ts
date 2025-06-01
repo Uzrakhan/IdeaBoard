@@ -1,9 +1,9 @@
 /// <reference types="node" />
 import express from 'express';
-import * as http from 'http';
+import http from 'http';
 import { Server, Socket } from 'socket.io';
 import cors from 'cors';
-import * as dotenv from 'dotenv';
+import dotenv from 'dotenv';
 import { Low } from 'lowdb';
 import { JSONFile } from 'lowdb/node';
 // import { Data, DrawingLine, Point } from './types';
