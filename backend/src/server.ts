@@ -1,8 +1,8 @@
 /// <reference types="node" />
-import * as express from 'express';
+import express from 'express';
 import * as http from 'http';
 import { Server, Socket } from 'socket.io';
-import * as cors from 'cors';
+import cors from 'cors';
 import * as dotenv from 'dotenv';
 import { Low } from 'lowdb';
 import { JSONFile } from 'lowdb/node';
