@@ -8,9 +8,9 @@ dotenv.config();
 
 const app = express();
 const allowedOrigins = [
-    process.env.CLIENT_URL,
     'http://localhost:5173',
-    'https://idea-board-virid.vercel.app'
+    'https://idea-board-virid.vercel.app',
+    'https://ideaboard-backend.onrender.com'
 ];
 
 app.use(cors({

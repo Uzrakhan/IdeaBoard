@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/socket.io/(.*)",
+      "destination": "https://ideaboard-backend.onrender.com/socket.io/$1"
+    }
+  ]
+}
