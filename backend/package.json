@@ -4,8 +4,7 @@
     "description": "",
     "main": "src/server.ts",
     "scripts": {
-        "postinstall": "npm install --only=dev",
-        "build": "npm install && tsc",
+        "build": "tsc",
         "start": "ts-node src/server.ts"
     },
     "keywords": [],
