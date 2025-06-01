@@ -4,10 +4,9 @@
     "description": "",
     "main": "src/server.ts",
     "scripts": {
+        "preinstall": "npm install -g ts-node",
         "build": "npm install && tsc",
-        "test": "echo \"Error: no test specified\" && exit 1",
-        "start": "ts-node src/server.ts",
-        "preinstall": "npm install -g ts-node typescript"
+        "start": "ts-node src/server.ts"
     },
     "keywords": [],
     "author": "",
