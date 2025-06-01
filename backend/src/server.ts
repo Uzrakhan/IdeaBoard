@@ -1,6 +1,6 @@
 import express from 'express';
 import http from 'http';
-import { Server } from 'socket.io';
+import { Server, Socket } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
 
@@ -14,7 +14,7 @@ const allowedOrigins = [
 ];
 
 app.use(cors({
-    origin: (origin, callback) => {
+    origin: (origin: string| undefined, callback: (err:Error | null, allow?: boolean) => void) => {
         if (!origin || allowedOrigins.includes(origin)) {
             callback(null,true)
         }else {
@@ -62,7 +62,7 @@ drawingLines = db.data.drawingLines
 
 
 //Connection handler
-io.on('connection', (socket) => {
+io.on('connection', (socket: Socket) => {
     console.log('New client connected:', socket.id);
 
     //send existing drawing to new client
