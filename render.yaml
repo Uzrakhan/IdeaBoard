@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: ideaboard-backend
+    runtime: node
+    buildCommand: "cd server && npm install"
+    startCommand: "cd server && npm start"
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: CLIENT_URL
+        value: https://idea-board-virid.vercel.app/

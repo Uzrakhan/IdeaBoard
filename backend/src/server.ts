@@ -7,18 +7,22 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const app = express();
-app.use(cors({origin: process.env.CLIENT_URL, credentials: true}));
+const allowedOrigins = [
+    process.env.CLIENT_URL,
+    'http://localhost:5173'
+];
 
-/*
 app.use(cors({
-  origin: "http://localhost:5173",  
-  credentials: true
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null,true)
+        }else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true
 }));
-*/
 
-app.get('/health', (req,res) => {
-    res.status(200).send('OK');
-})
 
 const server = http.createServer(app);
 
@@ -42,6 +46,20 @@ type DrawingLine = {
 
 let drawingLines: DrawingLine[] = [];
 
+
+//add database persistence (install lowdb)
+import { Low } from 'lowdb';
+import { JSONFile } from 'lowdb/node';
+type Data = { drawingLines: DrawingLine[] };
+const adapter = new JSONFile<Data>('db.json');
+const db = new Low(adapter, { drawingLines: [] });
+
+
+//initialize data
+db.data ||= { drawingLines: []};
+drawingLines = db.data.drawingLines
+
+
 //Connection handler
 io.on('connection', (socket) => {
     console.log('New client connected:', socket.id);
@@ -49,10 +67,11 @@ io.on('connection', (socket) => {
     //send existing drawing to new client
     socket.emit('initial-state', drawingLines);
 
-    socket.on('draw', (line: DrawingLine) => {
+    socket.on('draw',async (line: DrawingLine) => {
         // Add the new line segment to our drawing
         drawingLines.push(line);
 
+        await db.write(); //save to file
         // Broadcast to all other clients
         socket.broadcast.emit('draw', line);
     });
