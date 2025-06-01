@@ -1,8 +1,12 @@
 import express from 'express';
-import http from 'http';
+import * as http from 'http';
 import { Server, Socket } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { Low } from 'lowdb';
+import { JSONFile } from 'lowdb/node';
+// import { Data, DrawingLine, Point } from './types';
+
 
 dotenv.config();
 
@@ -14,7 +18,7 @@ const allowedOrigins = [
 ];
 
 app.use(cors({
-    origin: (origin: string| undefined, callback: (err:Error | null, allow?: boolean) => void) => {
+    origin: (origin: string | undefined, callback: (err:Error | null, allow?: boolean) => void) => {
         if (!origin || allowedOrigins.includes(origin)) {
             callback(null,true)
         }else {
@@ -49,8 +53,6 @@ let drawingLines: DrawingLine[] = [];
 
 
 //add database persistence (install lowdb)
-import { Low } from 'lowdb';
-import { JSONFile } from 'lowdb/node';
 type Data = { drawingLines: DrawingLine[] };
 const adapter = new JSONFile<Data>('db.json');
 const db = new Low(adapter, { drawingLines: [] });
@@ -90,7 +92,7 @@ io.on('connection', (socket: Socket) => {
 
 
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT) : 5000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
