@@ -9,7 +9,7 @@ function App() {
         <h1 className="text-4xl font-bold text-indigo-600">Ideaboard</h1>
         <p className="text-gray-600">Real-Time Collaborative Whiteboard</p>
       </header>
-      <main className="container mx-auto px-4">
+      <main className="flex flex-col h-screen container mx-auto px-4">
         <Whiteboard />
       </main>
       <footer className="text-center mt-8 text-gray-500">
