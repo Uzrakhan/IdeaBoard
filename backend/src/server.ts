@@ -1,7 +1,6 @@
 /// <reference types="node" />
 import express from 'express'; // Use import for consistency
 import cors from 'cors'; // Fixed: Removed duplicate require statement
-
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import type { Socket } from 'socket.io/dist/socket';

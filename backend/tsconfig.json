@@ -9,6 +9,7 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
+    "types": ["node", "express", "cors"],
     "typeRoots": ["./node_modules/@types", "./src"]
     },
   "include": ["**/*.ts", "src/**/*.d.ts"],
