@@ -1,7 +1,11 @@
 /// <reference types="node" />
-import express from 'express';
-import http from 'http';
-import { Server, Socket } from 'socket.io';
+const express = require('express');
+const cors = require('cors');
+
+
+import { createServer } from 'http';
+import { Server } from 'socket.io';
+import type { Socket } from 'socket.io/dist/socket';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { Low } from 'lowdb';
@@ -30,7 +34,7 @@ app.use(cors({
 }));
 
 
-const server = http.createServer(app);
+const server = createServer(app);
 
 const io = new Server(server, {
     cors: {
