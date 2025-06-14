@@ -7,6 +7,10 @@ import type { Socket } from 'socket.io/dist/socket';
 import dotenv from 'dotenv';
 import { Low } from 'lowdb';
 import { JSONFile } from 'lowdb/node';
+import authRoutes from './routes/auth';
+import roomRoutes from './routes/rooms';
+import mongoose from 'mongoose';
+
 
 dotenv.config();
 
@@ -29,6 +33,34 @@ app.use(
     credentials: true,
   })
 );
+
+app.use(express.json());
+
+// Add a very early log to see if requests hit the app
+app.use((req: { method: any; url: any; }, res: any, next: () => void) => {
+    console.log(`[Server] Incoming request: ${req.method} ${req.url}`);
+    next();
+});
+
+app.use('/api/auth', authRoutes);
+app.use('/api/rooms', roomRoutes);
+
+//error handling
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error(err.stack);
+  res.status(500).json({ message: 'Internal server error' });
+})
+
+//mongodb connection
+if (!process.env.MONGO_URI) {
+  throw new Error('MONGO_URI environment variable is not defined');
+}
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => {
+    console.log('Mongodb connected');
+    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  })
+  .catch(err => console.error('MongoDB connection error:', err));
 
 const server = createServer(app);
 
@@ -90,4 +122,23 @@ io.on('connection', (socket: Socket) => {
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 5000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+      // Temporarily log JWT_SECRET here to confirm it loads at startup
+    console.log(`[Server] JWT_SECRET loaded: ${!!process.env.JWT_SECRET}`); // Checks if it's truthy
+    if (!process.env.JWT_SECRET) {
+        console.error('[Server ERROR] JWT_SECRET is NOT set in environment variables!');
+    }
+
+});
+
+
+// Add a global uncaught exception handler (for synchronous errors not in try/catch)
+process.on('uncaughtException', (err) => {
+    console.error('[CRITICAL ERROR] Uncaught Exception:', err);
+    process.exit(1); // Exit process after logging
+});
+
+// Add a global unhandled rejection handler (for unhandled Promise rejections)
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('[CRITICAL ERROR] Unhandled Rejection at:', promise, 'reason:', reason);
+    process.exit(1); // Exit process after logging
 });

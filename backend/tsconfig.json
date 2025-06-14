@@ -9,7 +9,9 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
-    "types": [],
+    "typeRoots": [        /* Specify list of folder names to include type definitions from. */
+      "./node_modules/@types"
+    ]
     },
   "include": ["**/*.ts"],
   "exclude": ["node_modules"]
