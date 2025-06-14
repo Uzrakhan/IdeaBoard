@@ -42,32 +42,32 @@ const handleError = (error: any) => {
 }
 
 export const login = (username: string, password: string) => 
-    api.post(`${API_URL}/auth/login`, { username, password }, {
+    api.post(`/auth/login`, { username, password }, {
         headers: { 'Content-Type': 'application/json' }
     })
         .catch(handleError)
 
 
 export const signup = (username: string, password: string) => 
-    api.post(`${API_URL}/auth/signup`, { username, password }, {
+    api.post(`/auth/signup`, { username, password }, {
     headers: { 'Content-Type': 'application/json' }
     })
         .catch(handleError);
 
 export const createRoom = () => 
-    api.post(`${API_URL}/rooms`, {}, {
+    api.post(`/rooms`, {}, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     });
 
 
 export const joinRoom = (roomId: string) =>
-    api.post(`${API_URL}/rooms/${roomId}/join`, {}, {
+    api.post(`/rooms/${roomId}/join`, {}, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     })
         .catch(handleError);
 
 export const getRoom = (roomId: string) => 
-    api.get(`${API_URL}/rooms/${roomId}`, {
+    api.get(`/rooms/${roomId}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     })
         .catch(handleError);
@@ -78,7 +78,7 @@ export const handleRoomRequest = (
     userId: string,
     action: 'approve' | 'reject'
 ) => 
-    api.put(`${API_URL}/rooms/${roomId}/requests/${userId}`, { action }, {
+    api.put(`/rooms/${roomId}/requests/${userId}`, { action }, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     });
 
