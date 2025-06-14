@@ -3,7 +3,7 @@ import { socket } from '../socket';
 import type { Room } from '../types';
 
 interface WhiteboardProps {
-  room: Room;
+  room?: Room;
 }
 
 type Point = { x: number; y: number };
