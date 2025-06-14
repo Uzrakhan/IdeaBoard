@@ -8,7 +8,6 @@ interface CreateRoomProps {
 }
 
 
-
 const CreateRoom: React.FC<CreateRoomProps> = ({ onRoomCreated }) => {
     const [roomLink,setRoomLink] = useState('');
     const [loading, setLoading] = useState(false);
@@ -41,7 +40,7 @@ const CreateRoom: React.FC<CreateRoomProps> = ({ onRoomCreated }) => {
             <button
             onClick={handleCreateRoom}
             disabled={loading}
-            className="create-btn"
+            className="bg-sky-400 px-2 py-1 rounded"
             >
                 {loading ? 'Creating..' : 'Create Room'}
             </button>
@@ -57,7 +56,7 @@ const CreateRoom: React.FC<CreateRoomProps> = ({ onRoomCreated }) => {
                     />
                     <button 
                         onClick={() => navigator.clipboard.writeText(roomLink)}
-                        className="copy-btn"
+                        className="bg-slate-600 text-white p-2"
                     >
                         Copy
                     </button>

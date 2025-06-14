@@ -36,7 +36,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
     <div className='auth-container'>
         <h2>{isLogin ? 'Login' : 'Sign Up'}</h2>
         {error && <div className='error'>{error}</div>}
-        <form>
+        <form onSubmit={handleSubmit}>
             <input
                 type="text"
                 placeholder="Username"

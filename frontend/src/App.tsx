@@ -16,12 +16,23 @@ const App: React.FC = () => {
   //Store the currently active room details
   const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
 
+  const [loadingAuth, setLoadingAuth] = useState(true);
+
   //Check user authetication on initial load
   useEffect(() => {
     const token = localStorage.getItem('token'); //Fetch authentication token
+    console.log('Token being sent:', token);
+    console.log('Token type:', typeof token);
+    console.log('Token length:', token?.length);
+    
     const userId = localStorage.getItem('userId'); //Fetch user ID
     setIsAuthenticated(!!token && !!userId); //Update authentication state
+    setLoadingAuth(false);
   }, []);
+
+  if (loadingAuth) {
+    return <div className="app-loading">Loading...</div>;
+  }
 
   return (
     <Router>

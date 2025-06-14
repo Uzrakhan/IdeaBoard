@@ -1,5 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { socket } from '../socket';
+import type { Room } from '../types';
+
+interface WhiteboardProps {
+  room: Room;
+}
 
 type Point = { x: number; y: number };
 type DrawingLine = {
@@ -8,7 +13,7 @@ type DrawingLine = {
   width: number;
 };
 
-export default function Whiteboard() {
+const Whiteboard: React.FC<WhiteboardProps> = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -301,4 +306,6 @@ export default function Whiteboard() {
       </div>
     </div>
   );
-}
+};
+
+export default Whiteboard;
