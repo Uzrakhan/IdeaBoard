@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getRoom, joinRoom } from '../api';
 import type { Room } from '../types';
-import RoomAdminPanel from './RoomAdminPanel';
+import { useAuth } from '../context/AuthContext';
 
 interface JoinRoomProps {
     room: Room;

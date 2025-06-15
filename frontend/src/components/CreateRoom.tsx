@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { createRoom, getRoom } from '../api';
 import type { Room } from '../types';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 
 interface CreateRoomProps {
   onRoomCreated: (room: Room) => void;
+    setCurrentRoom: (room: import('../types').Room) => void;
 }
 
 const CreateRoom: React.FC<CreateRoomProps> = ({ onRoomCreated }) => {
@@ -14,7 +14,7 @@ const CreateRoom: React.FC<CreateRoomProps> = ({ onRoomCreated }) => {
     const [error, setError] = useState('');
     const [roomId, setRoomId] = useState(''); 
     const navigate = useNavigate();
-    const { user } = useAuth();
+    
 
     const handleCreateRoom = async () => {
         setIsLoading(true);
