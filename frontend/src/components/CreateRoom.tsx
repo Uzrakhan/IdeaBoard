@@ -1,71 +1,152 @@
 import { useState } from 'react';
 import { createRoom, getRoom } from '../api';
-import ShareButtons from './ShareButtons';
 import type { Room } from '../types';
+import { useNavigate } from 'react-router-dom';
+
+
 
 interface CreateRoomProps {
-    onRoomCreated: (room: Room) => void;
+  setCurrentRoom: React.Dispatch<React.SetStateAction<Room | null>>;
+  onRoomCreated: (room: Room) => void;
+  // (other props if any)
 }
 
 
 const CreateRoom: React.FC<CreateRoomProps> = ({ onRoomCreated }) => {
     const [roomLink,setRoomLink] = useState('');
-    const [loading, setLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
+    const navigate = useNavigate();
+    const {user} = useAuth();
 
     const handleCreateRoom = async () => {
-        setLoading(true);
+        setIsLoading(true);
         setError('');
 
         try{
             const response = await createRoom();
             const roomLink = `${window.location.origin}/join/${response.data.roomId}`
             setRoomLink(roomLink);
+            navigate(`/room/${response.data.roomId}`);
             //fetch full room details and pass to parent
             const roomResponse = await getRoom(response.data.roomId);
             onRoomCreated(roomResponse.data)
         } catch(err: any) {
             setError(err.response?.data?.message || 'Failed to create room')
         } finally {
-            setLoading(false);
+            setIsLoading(false);
         }
     }
 
   return (
-    <div className='create-room'>
-        <h2>Create Collaboration Room</h2>
-        {error && <div className='error'>{error}</div>}
-
-        {!roomLink ? (
-            <button
-            onClick={handleCreateRoom}
-            disabled={loading}
-            className="bg-sky-400 px-2 py-1 rounded"
-            >
-                {loading ? 'Creating..' : 'Create Room'}
-            </button>
-        ) : (
-            <div className='room-link'>
-                <p>Share this link with others</p>
-                <div className='link-container'>
-                    <input 
-                        type="text" 
-                        value={roomLink} 
-                        readOnly 
-                        className="link-input"
-                    />
-                    <button 
-                        onClick={() => navigator.clipboard.writeText(roomLink)}
-                        className="bg-slate-600 text-white p-2"
-                    >
-                        Copy
-                    </button>
-                </div>
-                <ShareButtons url={roomLink}/>
+    <div className='max-w-4xl mx-auto px-4 py-8'>
+        <div className='bg-white rounded-xl shadow-md p-6 md:p-8'>
+            <div className='text-center mb-8'>
+                <h1 className='text-2xl font-bold text-gray-800 mb-2'>
+                    Create Collaboration Room
+                </h1>
+                <p className='text-gray-600'>
+                    Start a new session and invite others to join
+                </p>
             </div>
-        )}
+
+            <div className='flex flex-col items-center'>
+                {roomLink ? (
+                    <div className='w-full max-w-lg'>
+                        <div className='bg-indigo-50 p-4 rounded-lg mb-6'>
+                            <p className='text-indigo-800 text-cenetr mb-2'>
+                                Room created successfully! Share this link:
+                            </p>
+
+                            <div className='flex'>
+                                <input 
+                                    type='text'
+                                    value={roomLink}
+                                    readOnly
+                                    className='flex-grow px-3 py-2 border border-indigo-300 rounded-l-md focus:outline-none'
+                                />
+                                <button
+                                    onClick={() => navigator.clipboard.writeText(roomLink)}
+                                    className='bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-r-md transition-colors'
+                                >
+                                    Copy
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className='flex justify-center space-x-4 mb-6'>
+                            <button
+                                className='bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md flex items-center'
+                            >
+                                <i className='fab fa-twitter mr-2'>
+                                    Twitter
+                                </i>
+                            </button>
+                            <button
+                                className='bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md flex items-center'
+                            >
+                                <i className='fab fa-whatsapp mr-2'>
+                                    WhatsApp
+                                </i>
+                            </button>
+                            <button
+                                className="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-md flex items-center"
+                            >
+                                <i className="fab fa-facebook mr-2">
+                                    Facebook
+                                </i>
+                            </button>
+                        </div>
+
+                        <div className='text-center'>
+                            <p className='text-gray-600 mb-4'>
+                                You're now the room owner. You'll be able to approve join requests.
+                            </p>
+                            <button 
+                                onClick={() => navigate(`/room/${roomLink.split('/').pop()}`)}
+                                className='bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-md transition-colors'
+                            >
+                                Go to Whiteboard
+                            </button>
+                        </div>
+                    </div>
+                ): (
+                    <div className='text-center'>
+                        <div className='bg-rgay-200 border-2 border-dashed rounded-xl w-64 h-64 mx-auto mb-8'>
+                            <button
+                                onClick={handleCreateRoom}
+                                disabled={isLoading}
+                                className='bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-8 rounded-lg text-lg transition-colors disabled:opacity-50 flex items-center mx-auto'
+                            >
+                                {isLoading ? (
+                                    <>
+                                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Creating Room...
+                                    </>
+                                ): (
+                                    'Create Room'
+                                )}
+                            </button>
+
+                            {error && (
+                                <div className='mt-4 text-red-600'>
+                                    {error}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
     </div>
   )
 }
 
 export default CreateRoom
+
+function useAuth(): { user: any; } {
+    throw new Error('Function not implemented.');
+}

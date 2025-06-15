@@ -1,12 +1,34 @@
 // src/App.tsx
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useParams, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useParams, useNavigate, useLocation } from 'react-router-dom';
 import Auth from './components/Auth';
 import CreateRoom from './components/CreateRoom';
 import JoinRoom from './components/JoinRoom';
 import Whiteboard from './components/Whiteboard';
 import type { Room } from './types';
 import { getRoom } from './api';
+import Header from './components/Header';
+import Footer from './components/Footer';
+import Home from './components/Home';
+
+//layout component to wrap pages with header & footer
+const Layout = ({children}: { children: React.ReactNode}) => {
+  const location = useLocation();
+
+  //hide header & footer on auth page
+  const hideOnAuth = location.pathname === '/auth';
+
+  return (
+    <div className='app-layout'>
+      {!hideOnAuth && <Header />}
+      <main className='main-content'>
+        {children}
+      </main>
+      {!hideOnAuth && <Footer />}
+    </div>
+  )
+}
+
 
 // Main App Component
 const App: React.FC = () => {
@@ -30,6 +52,17 @@ const App: React.FC = () => {
     setLoadingAuth(false);
   }, []);
 
+  //logout logic
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('username');
+    setCurrentRoom(null);
+    setIsAuthenticated(false);
+  };
+
+
+
   if (loadingAuth) {
     return <div className="app-loading">Loading...</div>;
   }
@@ -38,23 +71,41 @@ const App: React.FC = () => {
     <Router>
       <div className="app-container">
         <Routes>
-          {/* Auth route */}
+          {/* Public routes */}
           <Route 
             path="/auth" 
             element={
-              isAuthenticated ? 
-                <Navigate to="/" /> :  //Redirect to dashboard if authenticated
-                <Auth onAuthSuccess={() => setIsAuthenticated(true)} /> // Render Auth component
-            } 
+              <Auth onAuthSuccess={() => setIsAuthenticated(true)}/>
+            }
+          />
+
+          {/* Private routes with layout */}
+          <Route 
+           path='/'
+           element={
+            isAuthenticated ? (
+              <Layout>
+                <Home />
+              </Layout>
+            ) : (
+              <Navigate to="/auth"/>
+            )
+           }
           />
           
           {/* Create room (dashboard) */}
           <Route 
-            path="/" 
+            path="/create-room" 
             element={
-              isAuthenticated ? 
-                <CreateRoom onRoomCreated={setCurrentRoom} /> :  //Render CreateRoom if authenticated
-                <Navigate to="/auth" /> //Redirect to authentication page if not authenticated
+              isAuthenticated ? (
+                <Layout>
+                  <CreateRoom setCurrentRoom={setCurrentRoom} onRoomCreated={function (): void {
+                    throw new Error('Function not implemented.');
+                  } }/>
+                </Layout>
+              ) : (
+                <Navigate to="/auth"/>
+              )
             } 
           />
           
@@ -63,7 +114,9 @@ const App: React.FC = () => {
             path="/join/:roomId"
             element={
               isAuthenticated ? (
-                <JoinRoomWrapper currentRoom={currentRoom} setCurrentRoom={setCurrentRoom} /> // Render JoinRoomWrapper
+                <Layout>
+                  <JoinRoomWrapper currentRoom={currentRoom} setCurrentRoom={setCurrentRoom} />
+                </Layout>
               ) : (
                 <Navigate to="/auth" /> // Redirect to authentication page if not authenticated
               )
@@ -75,7 +128,9 @@ const App: React.FC = () => {
             path="/room/:roomId"
             element={
               isAuthenticated && currentRoom ? (
-                <Whiteboard room={currentRoom} /> // Render Whiteboard if authenticated and room exists
+                <Layout>
+                  <Whiteboard room={currentRoom} /> 
+                </Layout>
               ) : (
                 <Navigate to="/" /> // Redirect to dashboard if room doesn't exist
               )

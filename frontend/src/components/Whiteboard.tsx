@@ -1,6 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { socket } from '../socket';
 import type { Room } from '../types';
+import { useParams } from 'react-router-dom';
+
+// Mock room data - in a real app, this would come from an API
+const mockRoom: Room = {
+  _id: "1",
+  roomId: "ABC123",
+  owner: {
+    _id: "user1",
+    username: "John Doe"
+  },
+  members: [
+    { user: { _id: "user1", username: "John Doe"}, status: "approved"},
+    { user: { _id: "user2", username: "Jane Smith"}, status: "approved"},
+    { user: { _id: "user3", username: "Bob Johnson"}, status: "pending"}
+  ],
+  createdAt: new Date().toISOString()
+}
 
 interface WhiteboardProps {
   room?: Room;
@@ -25,6 +42,8 @@ const Whiteboard: React.FC<WhiteboardProps> = () => {
   const linesRef = useRef<DrawingLine[]>([]);
   const redrawTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [canvasDimensions, setCanvasDimensions] = useState({ width: 0, height: 0 });
+
+  const { roomId } = useParams<{ roomId: string }>();
 
   // Keep refs updated with current state
   useEffect(() => {
@@ -258,51 +277,145 @@ const Whiteboard: React.FC<WhiteboardProps> = () => {
   };
 
   return (
-    <div className='flex flex-col items-center w-full max-w-6xl mx-auto'>
-      <div className='flex gap-4 mb-4 w-full max-w-4xl'>
-        <input 
-          type="color" 
-          value={color} 
-          onChange={(e) => setColor(e.target.value)} 
-          className="cursor-pointer w-12 h-12"
-        />
-        <div className="flex items-center gap-2">
-          <span className="text-white">Size:</span>
-          <input 
-            type="range" 
-            min="1" 
-            max="20" 
-            value={brushSize} 
-            onChange={(e) => setBrushSize(parseInt(e.target.value))}
-            className="w-32"
-          />
-          <span className="text-white w-8">{brushSize}px</span>
+    <div className='bg-gray-100 min-h-screen'>
+      <div className='max-w-7xl mx-auto px-4 py-6'>
+        <div className='bg-white rounded-xl shadow-md mb-6 p-4'>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
+            <div>
+              <h1 className='texy-xl font-bold text-gray-800'>
+                Collaboration Room: <span className='text-indigo-600'>
+                  {roomId}
+                </span>
+              </h1>
+              <p className='text-gray-600'>
+                Created by: {mockRoom.owner.username}
+              </p>
+            </div>
+
+            <div className='mt-4 md:mt-0 flex items-cenetr space-x-4'>
+              <div className='flex space-x-2'>
+                {mockRoom.members
+                  .filter(m => m.status === "approved")
+                  .slice(0,3)
+                  .map((member,index) => (
+                    <div key={index} className='bg-indigo-100 w-8 h-8 rounded-full flex items-center justify-center border-2 border-white'>
+                      <span className='text-indigo-700 text-xs font-medium'>
+                        {member.user.username.charAt(0)}
+                      </span>
+                    </div>
+                  ))}
+                  {mockRoom.members.filter(m => m.status === "approved").length > 3 && (
+                    <div className='bg-gray-200 w-8 h-8 rounded-full flex items-center justify-center border-2 border-white'>
+                      <span className='text-gray-600 text-xs'>
+                        +{mockRoom.members.filter(m => m.status === "approved").length - 3}
+                      </span>
+                    </div>
+                  )}
+              </div>
+              <button
+                className='bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1 rounded-full text-sm'
+              >
+                Invite
+              </button>
+            </div>
+          </div>
         </div>
-        <button
-          onClick={clearBoard}
-          className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 ml-auto"
-        >
-          Clear
-        </button>
-      </div>
-      <div 
-        ref={containerRef}
-        className="w-full max-w-4xl border-2 border-gray-300 bg-white rounded-lg shadow-lg overflow-hidden"
-        style={{ height: '400px' }} // Fixed height for rectangular shape
-      >
-        <canvas
-          ref={canvasRef}
-          onMouseDown={startDrawing}
-          onMouseMove={draw}
-          onMouseUp={endDrawing}
-          onMouseLeave={endDrawing}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={endDrawing}
-          className="cursor-crosshair"
-          width={canvasDimensions.width}
-          height={canvasDimensions.height}
-        />
+
+        <div className='bg-white rounded-xl shadow-md p-4 mb-6'>
+            <div className='flex flex-wrap gap-4'>
+                <div className="flex items-center">
+                  <div className="w-6 h-6 bg-black rounded-full mr-2"></div>
+                  <span>Pen</span>
+                </div>
+
+                <div className='flex items-center'>
+                  <div className="w-6 h-6 bg-white border border-gray-300 rounded-full mr-2">
+                    <span>Eraser</span>
+                  </div>
+
+                  <div className="flex items-center">
+                    <input type='color' className='w-8 h-8 border-0 cursor-pointer' defaultValue="#000000"/>
+                    <span className='ml-2'>Color</span>
+                  </div>
+                  
+                  <div className='flex items-center'>
+                    <select className='border border-gray-300 rounded px-2 py-1'>
+                      <option>Thin</option>
+                      <option>Medium</option>
+                      <option>Thick</option>
+                    </select>
+                  </div>
+
+                  <div className='flex items-center space-x-2'>
+                    <button className='bg-gray-200 hover:bg-gray-300 w-8 h-8 rounded flex items-center justify-center'>
+                      <span>↺</span>
+                    </button>
+                    <button className='bg-gray-200 hover:bg-gray-300 w-8 h-8 rounded flex items-center justify-center'>
+                      <span>↻</span>
+                    </button>
+                    <button className='bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded'>
+                      Clear
+                    </button>
+                  </div>
+                </div>
+            </div>
+
+            <div 
+              ref={containerRef}
+              className="bg-white rounded-xl shadow-md overflow-hidden"
+              style={{ height: '400px' }} // Fixed height for rectangular shape
+            >
+              <canvas
+                ref={canvasRef}
+                onMouseDown={startDrawing}
+                onMouseMove={draw}
+                onMouseUp={endDrawing}
+                onMouseLeave={endDrawing}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={endDrawing}
+                className="w-full border border-gray-200 cursor-crosshair"
+                width={canvasDimensions.width}
+                height={canvasDimensions.height}
+              />
+            </div>
+
+            {/* Pending requests panel - only show for room owner */}
+            {/* TODO: Replace the mock currentUser with actual user from auth context or props */}
+            {(() => {
+              const currentUser = mockRoom.owner; // Replace with real user in production
+              return (
+                currentUser?._id === mockRoom.owner._id && mockRoom.members.some(m => m.status === "pending")
+              );
+            })() && (
+              <div className="bg-white rounded-xl shadow-md mt-6 p-4">
+                <h2 className='text-lg font-bold text-gray-800 mb-4'>
+                  Pending Join Requests
+                </h2>
+                <ul className='space-y-3'>
+                  {mockRoom.members
+                    .filter(m => m.status === "pending")
+                    .map((member, index) => (
+                      <li key={index} className='flex justify-between items-center py-2 bordder-b border-gray-100'>
+                        <div className='flex items-center'>
+                          <div className="bg-gray-200 border-2 border-dashed rounded-xl w-8 h-8 mr-3" />
+                          <span>{member.user.username}</span>
+                        </div>
+                        <div className='flex space-x-2'>
+                          <button className='bg-green-500 hiver:bg-green-600 text-white px-3 py-1 rounded text-sm'>
+                            Approve
+                          </button>
+                          <button className='bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm'>
+                            Reject
+                          </button>
+                        </div>
+                      </li>
+                    ))
+                  }
+                </ul>
+              </div>
+            )}
+        </div>
       </div>
     </div>
   );
