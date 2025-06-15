@@ -42,7 +42,7 @@ const Whiteboard: React.FC<WhiteboardProps> = () => {
   const linesRef = useRef<DrawingLine[]>([]);
   const redrawTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [canvasDimensions, setCanvasDimensions] = useState({ width: 0, height: 0 });
-
+   // Get current user from context
   const { roomId } = useParams<{ roomId: string }>();
 
   // Keep refs updated with current state
@@ -116,6 +116,23 @@ const Whiteboard: React.FC<WhiteboardProps> = () => {
       linesRef.current.forEach(line => drawLine(ctx, line));
     };
 
+    //Draw a line on the canvas
+    const drawLine = (ctx: CanvasRenderingContext2D, line: DrawingLine) => {
+      if (line.points.length === 0) return;
+      
+      ctx.beginPath();
+      ctx.lineWidth = line.width;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = line.color;
+
+      ctx.moveTo(line.points[0].x, line.points[0].y);
+      for (let i = 1; i < line.points.length; i++) {
+        ctx.lineTo(line.points[i].x, line.points[i].y);
+      }
+      ctx.stroke();
+    };
+
     // Handle window resize with debounce
     const handleResize = () => {
       if (redrawTimeoutRef.current) {
@@ -146,22 +163,6 @@ const Whiteboard: React.FC<WhiteboardProps> = () => {
     };
   }, []);
 
-  // Draw a line on the canvas
-  const drawLine = (ctx: CanvasRenderingContext2D, line: DrawingLine) => {
-    if (line.points.length === 0) return;
-    
-    ctx.beginPath();
-    ctx.lineWidth = line.width;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.strokeStyle = line.color;
-
-    ctx.moveTo(line.points[0].x, line.points[0].y);
-    for (let i = 1; i < line.points.length; i++) {
-      ctx.lineTo(line.points[i].x, line.points[i].y);
-    }
-    ctx.stroke();
-  };
 
   // Get coordinates relative to canvas
   const getCoordinates = (e: React.MouseEvent | React.TouchEvent): Point => {
@@ -324,25 +325,27 @@ const Whiteboard: React.FC<WhiteboardProps> = () => {
         <div className='bg-white rounded-xl shadow-md p-4 mb-6'>
             <div className='flex flex-wrap gap-4'>
                 <div className="flex items-center">
-                  <div className="w-6 h-6 bg-black rounded-full mr-2"></div>
+                  <div className="w-6 h-6 bg-black rounded-full mr-2" style={{ backgroundColor: color}}></div>
                   <span>Pen</span>
                 </div>
 
                 <div className='flex items-center'>
-                  <div className="w-6 h-6 bg-white border border-gray-300 rounded-full mr-2">
+                  <div className="w-6 h-6 bg-white border border-gray-300 rounded-full mr-2" onClick={() => setColor('#FFFFFF')}>
                     <span>Eraser</span>
                   </div>
 
                   <div className="flex items-center">
-                    <input type='color' className='w-8 h-8 border-0 cursor-pointer' defaultValue="#000000"/>
+                    <input type='color' value={color} className='w-8 h-8 border-0 cursor-pointer' onChange={(e) => setColor(e.target.value)}/>
                     <span className='ml-2'>Color</span>
                   </div>
                   
                   <div className='flex items-center'>
-                    <select className='border border-gray-300 rounded px-2 py-1'>
-                      <option>Thin</option>
-                      <option>Medium</option>
-                      <option>Thick</option>
+                    <select className='border border-gray-300 rounded px-2 py-1' value={brushSize} 
+                    onChange={(e) => setBrushSize(Number(e.target.value))}
+                    >
+                      <option value={2}>Thin</option>
+                      <option value={5}>Medium</option>
+                      <option value={10}>Thick</option>
                     </select>
                   </div>
 
@@ -353,7 +356,7 @@ const Whiteboard: React.FC<WhiteboardProps> = () => {
                     <button className='bg-gray-200 hover:bg-gray-300 w-8 h-8 rounded flex items-center justify-center'>
                       <span>↻</span>
                     </button>
-                    <button className='bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded'>
+                    <button className='bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded' onClick={clearBoard}>
                       Clear
                     </button>
                   </div>
@@ -363,7 +366,7 @@ const Whiteboard: React.FC<WhiteboardProps> = () => {
             <div 
               ref={containerRef}
               className="bg-white rounded-xl shadow-md overflow-hidden"
-              style={{ height: '400px' }} // Fixed height for rectangular shape
+              style={{ height: '500px' }} // Fixed height for rectangular shape
             >
               <canvas
                 ref={canvasRef}
