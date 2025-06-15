@@ -10,6 +10,7 @@ import { getRoom } from './api';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Home from './components/Home';
+import { AuthProvider } from './context/AuthContext';
 
 //layout component to wrap pages with header & footer
 const Layout = ({children}: { children: React.ReactNode}) => {
@@ -53,6 +54,7 @@ const App: React.FC = () => {
   }, []);
 
   //logout logic
+  /*
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('userId');
@@ -60,7 +62,7 @@ const App: React.FC = () => {
     setCurrentRoom(null);
     setIsAuthenticated(false);
   };
-
+  */
 
 
   if (loadingAuth) {
@@ -68,81 +70,83 @@ const App: React.FC = () => {
   }
 
   return (
-    <Router>
-      <div className="app-container">
-        <Routes>
-          {/* Public routes */}
-          <Route 
-            path="/auth" 
-            element={
-              <Auth onAuthSuccess={() => setIsAuthenticated(true)}/>
-            }
-          />
+    <AuthProvider>
+      <Router>
+        <div className="app-container">
+          <Routes>
+            {/* Public routes */}
+            <Route 
+              path="/auth" 
+              element={
+                <Auth />
+              }
+            />
 
-          {/* Private routes with layout */}
-          <Route 
-           path='/'
-           element={
-            isAuthenticated ? (
-              <Layout>
-                <Home />
-              </Layout>
-            ) : (
-              <Navigate to="/auth"/>
-            )
-           }
-          />
-          
-          {/* Create room (dashboard) */}
-          <Route 
-            path="/create-room" 
+            {/* Private routes with layout */}
+            <Route 
+            path='/'
             element={
               isAuthenticated ? (
                 <Layout>
-                  <CreateRoom setCurrentRoom={setCurrentRoom} onRoomCreated={function (): void {
-                    throw new Error('Function not implemented.');
-                  } }/>
+                  <Home />
                 </Layout>
               ) : (
                 <Navigate to="/auth"/>
               )
-            } 
-          />
-          
-          {/* Route for joining a room */}
-          <Route
-            path="/join/:roomId"
-            element={
-              isAuthenticated ? (
-                <Layout>
-                  <JoinRoomWrapper currentRoom={currentRoom} setCurrentRoom={setCurrentRoom} />
-                </Layout>
-              ) : (
-                <Navigate to="/auth" /> // Redirect to authentication page if not authenticated
-              )
             }
-          />
+            />
+            
+            {/* Create room (dashboard) */}
+            <Route 
+              path="/create-room" 
+              element={
+                isAuthenticated ? (
+                  <Layout>
+                    <CreateRoom setCurrentRoom={setCurrentRoom} onRoomCreated={function (): void {
+                      throw new Error('Function not implemented.');
+                    } }/>
+                  </Layout>
+                ) : (
+                  <Navigate to="/auth"/>
+                )
+              } 
+            />
+            
+            {/* Route for joining a room */}
+            <Route
+              path="/join/:roomId"
+              element={
+                isAuthenticated ? (
+                  <Layout>
+                    <JoinRoomWrapper currentRoom={currentRoom} setCurrentRoom={setCurrentRoom} />
+                  </Layout>
+                ) : (
+                  <Navigate to="/auth" /> // Redirect to authentication page if not authenticated
+                )
+              }
+            />
 
-          {/* Route for accessing a whiteboard */}
-          <Route
-            path="/room/:roomId"
-            element={
-              isAuthenticated && currentRoom ? (
-                <Layout>
-                  <Whiteboard room={currentRoom} /> 
-                </Layout>
-              ) : (
-                <Navigate to="/" /> // Redirect to dashboard if room doesn't exist
-              )
-            }
-          />
+            {/* Route for accessing a whiteboard */}
+            <Route
+              path="/room/:roomId"
+              element={
+                isAuthenticated && currentRoom ? (
+                  <Layout>
+                    <Whiteboard room={currentRoom} /> 
+                  </Layout>
+                ) : (
+                  <Navigate to="/" /> // Redirect to dashboard if room doesn't exist
+                )
+              }
+            />
 
-          
-          {/* Catch-all redirect */}
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
-      </div>
-    </Router>
+            
+            {/* Catch-all redirect */}
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+        </div>
+      </Router>
+    </AuthProvider>
   );
 };
 

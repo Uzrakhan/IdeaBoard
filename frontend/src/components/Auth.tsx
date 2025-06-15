@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { login, signup } from '../api';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext'; // Import useAuth from context
+import { useContext } from 'react';
+import { AuthContext } from '../context/AuthContext';
+
+
 
 // Removed the AuthProps interface since we're not using onAuthSuccess anymore
 const Auth: React.FC = () => {
@@ -131,3 +134,11 @@ const Auth: React.FC = () => {
 // REMOVED THE LOCAL useAuth FUNCTION - USING CONTEXT VERSION INSTEAD
 
 export default Auth;
+
+function useAuth(): { login: (token: string, userId: string, username: string) => void } {
+    const context = useContext(AuthContext);
+    if (!context) {
+        throw new Error('useAuth must be used within an AuthProvider');
+    }
+    return { login: context.login };
+}
