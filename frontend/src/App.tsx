@@ -205,7 +205,7 @@ const JoinRoomWrapper: React.FC<JoinRoomWrapperProps> = ({ currentRoom, setCurre
   if (error) return <div className="error">{error}</div>;
   
   // Render JoinRoom component if room details are successfully loaded
-  return currentRoom ? <JoinRoom room={currentRoom} /> : null;
+  return currentRoom ? <JoinRoom setCurrentRoom={setCurrentRoom} /> : null;
 };
 
 export default App;
