@@ -12,11 +12,12 @@ const mockRoom: Room = {
     username: "John Doe"
   },
   members: [
-    { user: { _id: "user1", username: "John Doe"}, status: "approved"},
-    { user: { _id: "user2", username: "Jane Smith"}, status: "approved"},
-    { user: { _id: "user3", username: "Bob Johnson"}, status: "pending"}
+    { user: { _id: "user1", username: "John Doe" }, status: "approved" },
+    { user: { _id: "user2", username: "Jane Smith" }, status: "approved" },
+    { user: { _id: "user3", username: "Bob Johnson" }, status: "pending" }
   ],
-  createdAt: new Date().toISOString()
+  createdAt: new Date().toISOString(),
+  name: ''
 }
 
 interface WhiteboardProps {
