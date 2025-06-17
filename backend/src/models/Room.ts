@@ -4,13 +4,14 @@ import { ref } from "process";
 
 export interface IRoomMemberData {
     user: Types.ObjectId;
-    status: 'pending' | 'approved' | 'rehected';
+    status: 'pending' | 'approved' | 'rejected';
 }
 
 export interface IRoomMember extends IRoomMemberData, Document {}
 
 export interface IRoom extends Document {
-    roomId: string;
+    roomCode: String,
+    name?: String,
     owner: Types.ObjectId | IUser;
     members: Types.DocumentArray<IRoomMember>;
     // Types.DocumentArray is a special Mongoose type for subdocument arrays.
@@ -19,10 +20,15 @@ export interface IRoom extends Document {
 }
 
 const RoomSchema = new mongoose.Schema({
-    roomId: {
+    roomCode: {
         type: String,
         required: true,
-        unique: true
+        unique: true,
+        index: true
+    },
+    name: {
+        type: String,
+        required: false
     },
     owner: {
         type: Schema.Types.ObjectId,
@@ -35,6 +41,16 @@ const RoomSchema = new mongoose.Schema({
     }],
     createdAt: {type: Date, default: Date.now}
 });
+
+RoomSchema.pre('save', function(next) {
+    const ownerId = this.owner as Types.ObjectId;
+    const isOwnerAMember = this.members.some(member => member.user.equals(ownerId));
+
+    if (!isOwnerAMember) {
+        this.members.push({ user: ownerId, status: 'approved' } as IRoomMember);
+    }
+    next();
+})
 
 const Room = model<IRoom>('Room', RoomSchema)
 export default Room;

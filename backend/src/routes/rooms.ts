@@ -3,12 +3,25 @@ import Room from '../models/Room';
 import { IRoomMemberData } from '../models/Room';
 import { auth } from '../middleware/auth';
 import { Types} from 'mongoose';
-
+import * as roomController from '../controllers/roomController';
 
 //creates a new router object
 const router = express.Router();
 
-
+//add this new route to get room details
+router.get('/:id', async (req: express.Request,res: express.Response) => {
+    try {
+        const room = await Room.findById(req.params.id);
+        if (!room) {
+            return res.status(404).json({ message: 'Room not found.'})
+        }
+        res.json(room);
+    }catch(err: any) {
+        console.error(err);
+        res.status(500).json({ message: 'Server error' })
+    }
+})
+/*
 //create a new room
 router.post('/', auth, async(req: express.Request, res: express.Response) => {
     try{
@@ -41,6 +54,11 @@ router.post('/', auth, async(req: express.Request, res: express.Response) => {
         res.status(500).json({message: 'Server error'})
     }
 });
+*/
+
+//new code
+router.post('/', auth, roomController.createRoom);
+
 
 //join room request
 router.post('/:roomId/join', auth, async (req: express.Request, res: express.Response) => {
@@ -109,6 +127,7 @@ router.put('/:roomId/requests/:userId', auth, async (req: express.Request, res: 
 });
 
 //get room deatils
+/*
 router.get('/:roomId', auth, async(req: express.Request, res: express.Response) => {
     try{
         const room = await Room.findOne({roomId: req.params.roomId})
@@ -124,5 +143,8 @@ router.get('/:roomId', auth, async(req: express.Request, res: express.Response) 
         res.status(500).json({ message: 'Server error' });
     }
 });
+*/
 
+//new code
+router.get('/:roomId', auth, roomController.getRoom);
 export default router;
