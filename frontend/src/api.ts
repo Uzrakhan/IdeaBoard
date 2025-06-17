@@ -54,31 +54,50 @@ export const signup = (username: string, password: string) =>
     })
         .catch(handleError);
 
+        /*
 export const createRoom = () => 
     api.post(`/rooms`, {}, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     });
+*/
 
 
-export const joinRoom = (roomId: string) =>
-    api.post(`/rooms/${roomId}/join`, {}, {
+export const createRoom = async () => {
+  try {
+    const response = await api.post('/rooms');
+    console.log('Room creation response:', response.data);
+    return response;
+  } catch (error:any) {
+    console.error('Full room creation error:', {
+      status: error.response?.status,
+      data: error.response?.data,
+      config: error.config
+    });
+    throw error;
+  }
+};
+
+
+
+export const joinRoom = (roomCode: string) =>
+    api.post(`/rooms/${roomCode}/join`, {}, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     })
         .catch(handleError);
 
-export const getRoom = (roomId: string) => 
-    api.get(`/rooms/${roomId}`, {
+export const getRoom = (roomCode: string) => 
+    api.get(`/rooms/${roomCode}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     })
         .catch(handleError);
 
 
 export const handleRoomRequest = (
-    roomId: string,
+    roomCode: string,
     userId: string,
     action: 'approve' | 'reject'
 ) => 
-    api.put(`/rooms/${roomId}/requests/${userId}`, { action }, {
+    api.put(`/rooms/${roomCode}/requests/${userId}`, { action }, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     });
 

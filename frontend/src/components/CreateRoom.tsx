@@ -12,9 +12,8 @@ const CreateRoom: React.FC<CreateRoomProps> = ({ onRoomCreated }) => {
     const [roomLink, setRoomLink] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
-    const [roomId, setRoomId] = useState(''); 
     const navigate = useNavigate();
-    
+    const [currentRoomCode, setCurrentRoomCode] = useState('')
 
     const handleCreateRoom = async () => {
         setIsLoading(true);
@@ -23,20 +22,21 @@ const CreateRoom: React.FC<CreateRoomProps> = ({ onRoomCreated }) => {
         try {
             // Create room
             const response = await createRoom();
-            const newRoomId = response.data.roomId;
-            const newRoomLink = `${window.location.origin}/join/${newRoomId}`;
+            const roomCode= response.data.roomCode;
+            const newRoomLink = `${window.location.origin}/join/${roomCode}`;
             
             // Store room ID and link
-            setRoomId(newRoomId);
+            setCurrentRoomCode(roomCode);
             setRoomLink(newRoomLink);
             
             // Fetch room details (optional, but good to have)
             try {
-                const roomResponse = await getRoom(newRoomId);
+                const roomResponse = await getRoom(roomCode);
                 onRoomCreated(roomResponse.data);
             } catch (err) {
                 console.error('Failed to fetch room details, but room was created', err);
             }
+            navigate(`/room/${roomCode}`)
         } catch(err: any) {
             setError(err.response?.data?.message || 'Failed to create room');
         } finally {
@@ -45,8 +45,8 @@ const CreateRoom: React.FC<CreateRoomProps> = ({ onRoomCreated }) => {
     }
 
     const goToWhiteboard = () => {
-        if (roomId) {
-            navigate(`/room/${roomId}`);
+        if (currentRoomCode) {
+            navigate(`/room/${currentRoomCode}`);
         }
     }
 
