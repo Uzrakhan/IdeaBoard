@@ -12,7 +12,7 @@ const RoomAdminPanel: React.FC<RoomAdminPanelProps> = ({ room, setRoom }) => {
 
     const handleRequest = async (userId: string, action: 'approve' | 'reject') => {
         try {
-            await handleRoomRequest(room.roomId, userId, action);
+            await handleRoomRequest(room.roomCode, userId, action);
             setRoom(prev => {
                 if (!prev) return null;
 
