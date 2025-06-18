@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 export interface User {
+  _id: string;
   userId: string;
   username: string;
 }
@@ -10,6 +11,7 @@ export interface AuthContextType {
   user: User | null;
   login: (token: string, userId: string, username: string) => void;
   logout: () => void;
+  currentUser: User
 }
 
 // Define the props for AuthProvider
@@ -32,7 +34,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     if (token && userId) {
       setIsAuthenticated(true);
-      setUser({ userId, username });
+      setUser({ _id: userId, userId, username });
     }
   }, []);
 
@@ -41,7 +43,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     localStorage.setItem('userId', userId);
     localStorage.setItem('username', username);
     setIsAuthenticated(true);
-    setUser({ userId, username });
+    setUser({ _id: userId, userId, username });
   };
 
   const logout = () => {
@@ -56,7 +58,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isAuthenticated,
     user,
     login,
-    logout
+    logout,
+    currentUser: user as User // or you can use user ?? { userId: '', username: '' } for a fallback
   };
 
   return (

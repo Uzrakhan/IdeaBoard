@@ -11,7 +11,7 @@ export interface RoomMember {
 export interface Room{
     name: string;
     _id: string;
-    roomId: string;
+    roomCode: string;
     owner: User;
     members: RoomMember[];
     createdAt: string;

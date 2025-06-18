@@ -1,6 +1,6 @@
 // src/App.tsx
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useParams, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useParams, useNavigate, useLocation } from 'react-router-dom';
 import Auth from './components/Auth';
 import CreateRoom from './components/CreateRoom';
 import JoinRoom from './components/JoinRoom';
@@ -41,6 +41,8 @@ const App: React.FC = () => {
 
   const [loadingAuth, setLoadingAuth] = useState(true);
 
+  const navigate = useNavigate();
+
   //Check user authetication on initial load
   useEffect(() => {
     const token = localStorage.getItem('token'); //Fetch authentication token
@@ -69,9 +71,14 @@ const App: React.FC = () => {
     return <div className="app-loading">Loading...</div>;
   }
 
+  const onRoomCreated = (room: Room) => {
+    setCurrentRoom(room);
+    console.log(`Frontend: Room created with code: ${room.roomCode}. Redirecting...`);
+    navigate(`/room/${room.roomCode}`); // Redirect to the new room's page
+  }
+
   return (
     <AuthProvider>
-      <Router>
         <div className="app-container">
           <Routes>
             {/* Public routes */}
@@ -102,9 +109,7 @@ const App: React.FC = () => {
               element={
                 isAuthenticated ? (
                   <Layout>
-                    <CreateRoom setCurrentRoom={setCurrentRoom} onRoomCreated={function (): void {
-                      throw new Error('Function not implemented.');
-                    } }/>
+                    <CreateRoom setCurrentRoom={setCurrentRoom} onRoomCreated={onRoomCreated}/>
                   </Layout>
                 ) : (
                   <Navigate to="/auth"/>
@@ -114,7 +119,7 @@ const App: React.FC = () => {
             
             {/* Route for joining a room */}
             <Route
-              path="/join/:roomId"
+              path="/join/:roomCode"
               element={
                 isAuthenticated ? (
                   <Layout>
@@ -128,11 +133,11 @@ const App: React.FC = () => {
 
             {/* Route for accessing a whiteboard */}
             <Route
-              path="/room/:roomId"
+              path="/room/:roomCode"
               element={
                 isAuthenticated && currentRoom ? (
                   <Layout>
-                    <Whiteboard room={currentRoom} /> 
+                    <WhiteboardWrapper setCurrentRoom={setCurrentRoom}/> 
                   </Layout>
                 ) : (
                   <Navigate to="/" /> // Redirect to dashboard if room doesn't exist
@@ -145,10 +150,55 @@ const App: React.FC = () => {
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </div>
-      </Router>
     </AuthProvider>
   );
 };
+
+// --- NEW WRAPPER FOR WHITEBOARD ---
+// This ensures Whiteboard fetches its own room data when the URL changes
+interface WhiteboardWrapperProps {
+  setCurrentRoom: (room: Room) => void;
+}
+
+const WhiteboardWrapper: React.FC<WhiteboardWrapperProps> = ({ setCurrentRoom }) => {
+  const { roomCode } = useParams<{ roomCode: string }>();
+  const navigate = useNavigate();
+  const [room,setRoom] = useState<Room | null>(null);
+  const [loading,setLoading] = useState(true);
+  const [error,setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchRoomDetails = async () => {
+      if (!roomCode) {
+        setError("No room code provided in URL.");
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      try {
+        const response = await getRoom(roomCode);
+        console.log("Fetched room data:", response.data); // Added this line
+        setRoom(response.data);
+        setCurrentRoom(response.data);
+      }catch(err: any) {
+        console.error("Error fetching room for whiteboard:", err);
+        setError(err.response?.data?.message || 'Failed to load room details.');
+        navigate('/'); // Redirect to home/dashboard on error
+      }finally {
+        setLoading(false);
+      }
+    };
+    fetchRoomDetails();
+  },[roomCode, navigate, setCurrentRoom]);
+
+
+    if (loading) return <div>Loading whiteboard...</div>;
+    if (error) return <div className="error">{error}</div>;
+    if (!room) return <Navigate to="/" />; // Should not happen if error handled
+
+    return <Whiteboard room={room} />;
+
+}
 
 // Wrapper for JoinRoom to handle room loading
 interface JoinRoomWrapperProps {
@@ -193,7 +243,7 @@ const JoinRoomWrapper: React.FC<JoinRoomWrapperProps> = ({ currentRoom, setCurre
       );
       
       if (isMember) {
-        navigate(`/room/${currentRoom.roomId}`); // Navigate to whiteboard
+        navigate(`/room/${currentRoom.roomCode}`); // Navigate to whiteboard
       }
     }
   }, [currentRoom, navigate]);

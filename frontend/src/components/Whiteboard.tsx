@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { socket } from '../socket';
 import type { Room } from '../types';
-import { useParams } from 'react-router-dom';
-
+import { useAuth } from '../context/AuthContext';
+/*
 // Mock room data - in a real app, this would come from an API
 const mockRoom: Room = {
   _id: "1",
-  roomId: "ABC123",
+  roomCode: "ABC123",
   owner: {
     _id: "user1",
     username: "John Doe"
@@ -19,9 +19,10 @@ const mockRoom: Room = {
   createdAt: new Date().toISOString(),
   name: ''
 }
+*/
 
 interface WhiteboardProps {
-  room?: Room;
+  room: Room;
 }
 
 type Point = { x: number; y: number };
@@ -31,7 +32,7 @@ type DrawingLine = {
   width: number;
 };
 
-const Whiteboard: React.FC<WhiteboardProps> = () => {
+const Whiteboard: React.FC<WhiteboardProps> = ({ room }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -43,8 +44,12 @@ const Whiteboard: React.FC<WhiteboardProps> = () => {
   const linesRef = useRef<DrawingLine[]>([]);
   const redrawTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [canvasDimensions, setCanvasDimensions] = useState({ width: 0, height: 0 });
-   // Get current user from context
-  const { roomId } = useParams<{ roomId: string }>();
+
+  //access room details directtly from teh 'room' prop
+  const currentRoom = room;
+
+  // Use the auth context to get the current user
+  const { currentUser } = useAuth();
 
   // Keep refs updated with current state
   useEffect(() => {
@@ -286,30 +291,34 @@ const Whiteboard: React.FC<WhiteboardProps> = () => {
             <div>
               <h1 className='texy-xl font-bold text-gray-800'>
                 Collaboration Room: <span className='text-indigo-600'>
-                  {roomId}
+                  {currentRoom.roomCode}
                 </span>
               </h1>
               <p className='text-gray-600'>
-                Created by: {mockRoom.owner.username}
+                Created by: {currentRoom.owner.username}
               </p>
             </div>
 
             <div className='mt-4 md:mt-0 flex items-cenetr space-x-4'>
               <div className='flex space-x-2'>
-                {mockRoom.members
+                {currentRoom.members
                   .filter(m => m.status === "approved")
                   .slice(0,3)
-                  .map((member,index) => (
+                  .map((member,index) => {
+                      console.log("Member:", member);
+                      console.log("Member user:", member ? member.user : 'member is undefined');
+                      console.log("Member username:", member && member.user ? member.user.username : 'member or user is undefined');
+                    return (
                     <div key={index} className='bg-indigo-100 w-8 h-8 rounded-full flex items-center justify-center border-2 border-white'>
                       <span className='text-indigo-700 text-xs font-medium'>
-                        {member.user.username.charAt(0)}
+                        {member?.user?.username?.charAt(0)}
                       </span>
                     </div>
-                  ))}
-                  {mockRoom.members.filter(m => m.status === "approved").length > 3 && (
+                  )})}
+                  {currentRoom.members.filter(m => m.status === "approved").length > 3 && (
                     <div className='bg-gray-200 w-8 h-8 rounded-full flex items-center justify-center border-2 border-white'>
                       <span className='text-gray-600 text-xs'>
-                        +{mockRoom.members.filter(m => m.status === "approved").length - 3}
+                        +{currentRoom.members.filter(m => m.status === "approved").length - 3}
                       </span>
                     </div>
                   )}
@@ -352,10 +361,10 @@ const Whiteboard: React.FC<WhiteboardProps> = () => {
 
                   <div className='flex items-center space-x-2'>
                     <button className='bg-gray-200 hover:bg-gray-300 w-8 h-8 rounded flex items-center justify-center'>
-                      <span>↺</span>
+                      <span>↺</span>{/* Undo */}
                     </button>
                     <button className='bg-gray-200 hover:bg-gray-300 w-8 h-8 rounded flex items-center justify-center'>
-                      <span>↻</span>
+                      <span>↻</span>{/* Redo */}
                     </button>
                     <button className='bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded' onClick={clearBoard}>
                       Clear
@@ -386,37 +395,32 @@ const Whiteboard: React.FC<WhiteboardProps> = () => {
 
             {/* Pending requests panel - only show for room owner */}
             {/* TODO: Replace the mock currentUser with actual user from auth context or props */}
-            {(() => {
-              const currentUser = mockRoom.owner; // Replace with real user in production
-              return (
-                currentUser?._id === mockRoom.owner._id && mockRoom.members.some(m => m.status === "pending")
-              );
-            })() && (
+            {currentUser && currentUser._id === currentRoom.owner?._id && currentRoom.members.some(m => m.status === 'pending') && (
               <div className="bg-white rounded-xl shadow-md mt-6 p-4">
                 <h2 className='text-lg font-bold text-gray-800 mb-4'>
                   Pending Join Requests
                 </h2>
                 <ul className='space-y-3'>
-                  {mockRoom.members
-                    .filter(m => m.status === "pending")
-                    .map((member, index) => (
-                      <li key={index} className='flex justify-between items-center py-2 bordder-b border-gray-100'>
-                        <div className='flex items-center'>
-                          <div className="bg-gray-200 border-2 border-dashed rounded-xl w-8 h-8 mr-3" />
-                          <span>{member.user.username}</span>
-                        </div>
-                        <div className='flex space-x-2'>
-                          <button className='bg-green-500 hiver:bg-green-600 text-white px-3 py-1 rounded text-sm'>
-                            Approve
-                          </button>
-                          <button className='bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm'>
-                            Reject
-                          </button>
-                        </div>
-                      </li>
-                    ))
-                  }
-                </ul>
+                {currentRoom.members
+                  .filter(m => m.status === "pending")
+                  .map((member, index) => (
+                    <li key={index} className='flex justify-between items-center py-2 border-b border-gray-100'>
+                      <div className='flex items-center'>
+                        <div className="bg-gray-200 border-2 border-dashed rounded-xl w-8 h-8 mr-3" />
+                        <span>{member.user?.username || 'Unknown User'}</span> {/* Defensive check */}
+                      </div>
+                      <div className='flex space-x-2'>
+                        <button className='bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm'>
+                          Approve
+                        </button>
+                        <button className='bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm'>
+                          Reject
+                        </button>
+                      </div>
+                    </li>
+                  ))
+                }
+              </ul>
               </div>
             )}
         </div>

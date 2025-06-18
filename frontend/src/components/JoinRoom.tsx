@@ -9,7 +9,7 @@ interface JoinRoomProps {
 }
 
 const JoinRoom: React.FC<JoinRoomProps> = ({ setCurrentRoom }) => {
-    const { roomId } = useParams<{ roomId: string }>();
+    const { roomCode } = useParams<{ roomCode: string }>();
     const [room, setRoom] = useState<Room | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [status, setStatus] = useState('');
@@ -20,14 +20,14 @@ const JoinRoom: React.FC<JoinRoomProps> = ({ setCurrentRoom }) => {
 
     useEffect(() => {
         const fetchRoom = async () => {
-            if (!roomId) {
-                setError('Room ID is missing');
+            if (!roomCode) {
+                setError('Room Code is missing');
                 setIsLoading(false);
                 return;
             }
 
             try {
-                const response = await getRoom(roomId);
+                const response = await getRoom(roomCode);
                 setRoom(response.data);
                 setError('');
             } catch (err: any) {
@@ -40,18 +40,18 @@ const JoinRoom: React.FC<JoinRoomProps> = ({ setCurrentRoom }) => {
         };
 
         fetchRoom();
-    }, [roomId, navigate]);
+    }, [roomCode, navigate]);
 
     const handleJoinRequest = async () => {
-        if (!roomId) return;
+        if (!roomCode) return;
         setError('');
 
         try {
-            await joinRoom(roomId);
+            await joinRoom(roomCode);
             setStatus('Join request sent to room owner.');
 
             // Refetch room data after successful join request
-            const updatedResponse = await getRoom(roomId);
+            const updatedResponse = await getRoom(roomCode);
             setRoom(updatedResponse.data);
             
             if (setCurrentRoom) {
@@ -146,7 +146,7 @@ const JoinRoom: React.FC<JoinRoomProps> = ({ setCurrentRoom }) => {
                         You own this room. You can manage access requests and start collaborating.
                     </p>
                     <button
-                        onClick={() => navigate(`/room/${roomId}`)}
+                        onClick={() => navigate(`/room/${roomCode}`)}
                         className='bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-medium'
                     >
                         Go to Whiteboard
@@ -159,7 +159,7 @@ const JoinRoom: React.FC<JoinRoomProps> = ({ setCurrentRoom }) => {
                         You're already a member of this room
                     </div>
                     <button
-                        onClick={() => navigate(`/room/${roomId}`)}
+                        onClick={() => navigate(`/room/${roomCode}`)}
                         className='bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-medium'
                     >
                         Join Whiteboard
