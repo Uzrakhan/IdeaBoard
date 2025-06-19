@@ -1,6 +1,5 @@
 import express from 'express';
-import Room from '../models/Room';
-import { IRoomMemberData } from '../models/Room';
+import Room, { IRoomMemberData,IRoomMember } from '../models/Room';
 import { auth } from '../middleware/auth';
 import { Types} from 'mongoose';
 import * as roomController from '../controllers/roomController';
@@ -59,8 +58,8 @@ router.post('/:roomCode/join', auth, async (req: express.Request, res: express.R
         }
 
         //check if already a member
-        const existingMember = room.members.find(member =>
-            member.user.toString() === req.user._id.toString()
+        const existingMember = room.members.find((member: IRoomMember) =>
+            member.user.toString() === req.user?._id.toString()
         );
 
         if (existingMember) {
@@ -83,15 +82,15 @@ router.put('/:room/requests/:userId', auth, async (req: express.Request, res: ex
         const {action} = req.body;
         const room = await Room.findOne({
             roomCode: req.params.roomCode,
-            owner: req.user._id as Types.ObjectId
+            owner: req.user?._id as Types.ObjectId
         });
 
         if (!room) {
             return res.status(404).json({ message: 'Room not found' });
         }
 
-        const memberIndex = room.members.findIndex(member => 
-            member.user.toString() === req.params.userId && 
+        const memberIndex = room.members.findIndex((member: IRoomMember) =>
+            member.user.toString() === req.params.userId &&
             member.status === 'pending'
         );
 

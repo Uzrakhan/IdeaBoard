@@ -8,10 +8,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "strict": true,
-    "typeRoots": [        /* Specify list of folder names to include type definitions from. */
-      "./node_modules/@types"
-    ]
+    "strict": true
     },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules"]

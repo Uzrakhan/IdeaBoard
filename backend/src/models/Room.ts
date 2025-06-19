@@ -39,9 +39,9 @@ const RoomSchema = new mongoose.Schema({
     createdAt: {type: Date, default: Date.now}
 });
 
-RoomSchema.pre('save', function (next) {
+RoomSchema.pre('save', function (this: IRoom, next: (err?: mongoose.CallbackError) => void) {
     const ownerId = this.owner as Types.ObjectId;
-    const isOwnerAMember = this.members.some(member => member.user.equals(ownerId));
+    const isOwnerAMember = this.members.some((member: IRoomMember) => member.user.equals(ownerId));
 
     if (!isOwnerAMember) {
         this.members.push({ user: ownerId, status: 'approved' } as IRoomMember);
