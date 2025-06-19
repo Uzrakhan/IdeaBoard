@@ -82,15 +82,26 @@ export const createRoom = async (req:any, res:any) => {
 // controllers/roomController.js
 export const getRoom = async (req:any, res:any) => {
   try {
-    const room = await Room.findOne({ roomCode: req.params.roomId })
-                           .populate('creator');
+    const room = await Room.findOne({ roomCode: req.params.roomCode })
+                           .populate('owner');
     
     if (!room) {
+      console.warn(`[getRoom Controller] Room with roomCode ${req.params.roomCode} NOT FOUND in DB.`); // New log!
       return res.status(404).json({ error: "Room not found" });
     }
     
+    console.log(`[getRoom Controller] Room ${room.roomCode} found successfully.`); // New log!
     res.json(room);
   } catch (err:any) {
-    res.status(500).json({ err: "Server error" });
+    console.error('----- [getRoom Controller] CAUGHT EXCEPTION -----'); // New log!
+    console.error('[getRoom Controller] Critical error message:', err.message);
+    console.error('[getRoom Controller] Full stack trace:\n', err.stack); 
+    console.error('-----------------------------------------');
+
+    res.status(500).json({ 
+      error: "Server error", 
+      reason: err.message, 
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
   }
 };

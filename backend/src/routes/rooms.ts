@@ -8,21 +8,12 @@ import * as roomController from '../controllers/roomController';
 //creates a new router object
 const router = express.Router();
 
-//add this new route to get room details
-router.get('/:id', async (req: express.Request,res: express.Response) => {
-    try {
-        const room = await Room.findById(req.params.id);
-        if (!room) {
-            return res.status(404).json({ message: 'Room not found.'})
-        }
-        res.json(room);
-    }catch(err: any) {
-        console.error(err);
-        res.status(500).json({ message: 'Server error' })
-    }
-})
-/*
 //create a new room
+router.post('/', auth, roomController.createRoom);
+
+
+//create a new room
+/*
 router.post('/', auth, async(req: express.Request, res: express.Response) => {
     try{
         //generate unique room ID
@@ -56,16 +47,13 @@ router.post('/', auth, async(req: express.Request, res: express.Response) => {
 });
 */
 
-//new code
-router.post('/', auth, roomController.createRoom);
-
 
 //join room request
-router.post('/:roomId/join', auth, async (req: express.Request, res: express.Response) => {
+router.post('/:roomCode/join', auth, async (req: express.Request, res: express.Response) => {
     try{
         //finds a single document in Room collection where roomId
         //matches the one from URL
-        const room = await Room.findOne({roomId: req.params.roomId});
+        const room = await Room.findOne({roomCode: req.params.roomCode});
         if (!room) {
             return res.status(404).json({message: 'Room not found.'})
         }
@@ -90,11 +78,11 @@ router.post('/:roomId/join', auth, async (req: express.Request, res: express.Res
 });
 
 //handle join request
-router.put('/:roomId/requests/:userId', auth, async (req: express.Request, res: express.Response) => {
+router.put('/:room/requests/:userId', auth, async (req: express.Request, res: express.Response) => {
     try{
         const {action} = req.body;
         const room = await Room.findOne({
-            roomId: req.params.roomId,
+            roomCode: req.params.roomCode,
             owner: req.user._id as Types.ObjectId
         });
 
@@ -146,5 +134,5 @@ router.get('/:roomId', auth, async(req: express.Request, res: express.Response) 
 */
 
 //new code
-router.get('/:roomId', auth, roomController.getRoom);
+router.get('/:roomCode', auth, roomController.getRoom);
 export default router;

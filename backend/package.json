@@ -21,10 +21,12 @@
         "socket.io": "^4.8.1"
     },
     "devDependencies": {
+        "@types/bcryptjs": "^2.4.6",
         "@types/cors": "^2.8.18",
         "@types/express": "^4.17.23",
-        "@types/jsonwebtoken": "^9.0.9",
+        "@types/jsonwebtoken": "^9.0.10",
         "@types/lowdb": "^1.0.15",
+        "@types/mongoose": "^5.11.96",
         "@types/node": "^22.15.29",
         "@types/socket.io": "^3.0.1",
         "ts-node": "^10.9.2",
