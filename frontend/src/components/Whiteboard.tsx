@@ -57,6 +57,22 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ room }) => {
     brushSizeRef.current = brushSize;
   }, [color, brushSize]);
 
+  //handler for the Invite button
+  const handleInviteClick = async() => {
+    const inviteLink = `${window.location.origin}/join/${currentRoom.roomCode}`;
+    console.log("Attempting to copy link:", inviteLink); // Debugging
+    try{
+      await navigator.clipboard.writeText(inviteLink);
+      alert('Room link copied to clipboard');
+      console.log('Link copied successfully!'); // Debugging
+    }catch(err) {
+      console.error('Failed to copy text:', err);
+      // Fallback for older browsers or if clipboard API fails (e.g., non-HTTPS, security restrictions)
+      prompt("Please copy this link manually:", inviteLink);
+      alert('Failed to automatically copy link. Please use the prompt to copy manually.');
+    }
+  }
+
   // Initialize canvas and set up event listeners
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -324,6 +340,7 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ room }) => {
                   )}
               </div>
               <button
+                onClick={handleInviteClick}
                 className='bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1 rounded-full text-sm'
               >
                 Invite

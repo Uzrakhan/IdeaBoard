@@ -36,7 +36,6 @@ const CreateRoom: React.FC<CreateRoomProps> = ({ onRoomCreated }) => {
             } catch (err) {
                 console.error('Failed to fetch room details, but room was created', err);
             }
-            navigate(`/room/${roomCode}`)
         } catch(err: any) {
             setError(err.response?.data?.message || 'Failed to create room');
         } finally {
