@@ -1,4 +1,3 @@
-/// <reference types="node" />
 import express from 'express'; // Use import for consistency
 import cors from 'cors'; // Fixed: Removed duplicate require statement
 import { createServer } from 'http';
@@ -158,13 +157,13 @@ mongoose.connect(process.env.MONGO_URI)
 
 
 // Add a global uncaught exception handler (for synchronous errors not in try/catch)
-process.on('uncaughtException', (err) => {
+process.on('uncaughtException', (err: Error) => {
     console.error('[CRITICAL] Uncaught Exception:', err);
     process.exit(1); // Exit process after logging
 });
 
 // Add a global unhandled rejection handler (for unhandled Promise rejections)
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason: unknown, promise: Promise<any>) => {
     console.error('[CRITICAL ERROR] Unhandled Rejection at:', promise, 'reason:', reason);
     process.exit(1); // Exit process after logging
 });
