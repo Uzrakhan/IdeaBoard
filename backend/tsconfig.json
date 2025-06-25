@@ -10,16 +10,8 @@
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "typeRoots": ["./node_modules/@types"],
-    "lib": ["ES2020"], // Explicitly define the standard library features available. Node.js backend typically needs ES features.
-    "types": [
-      "node",           // Crucial for 'process' and other Node.js globals
-      "express",
-      "cors",
-      "jsonwebtoken",
-      "bcryptjs",
-      "lowdb"
-    ]
-    },
+    "lib": ["ES2020"]
+  },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules"]
 }

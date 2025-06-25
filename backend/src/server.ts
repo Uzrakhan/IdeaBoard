@@ -1,35 +1,32 @@
-import express from 'express'; // Use import for consistency
-import cors from 'cors'; // Fixed: Removed duplicate require statement
+import express from 'express';
+import cors from 'cors';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
-import type { Socket } from 'socket.io/dist/socket';
 import dotenv from 'dotenv';
+import mongoose from 'mongoose';
 import { Low } from 'lowdb';
 import { JSONFile } from 'lowdb/node';
+import type { Socket } from 'socket.io/dist/socket';
 import authRoutes from './routes/auth';
 import roomRoutes from './routes/rooms';
-import mongoose from 'mongoose';
-
 
 dotenv.config();
 
 const app = express();
-
-app.set('trust proxy', 1);
-
 const allowedOrigins = [
   'http://localhost:5173',
   'https://idea-board-virid.vercel.app'
 ];
 
+// Middleware
 app.use(
   cors({
-    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    origin: (origin: string, callback: (arg0: Error | null, arg1: boolean | undefined) => void) => {
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
         console.warn(`[CORS] Blocked origin: ${origin}`);
-        callback(new Error('Not allowed by CORS'));
+        callback(new Error('Not allowed by CORS'), false);
       }
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
@@ -39,30 +36,56 @@ app.use(
 );
 
 app.use(express.json());
-
-// Add a very early log to see if requests hit the app
-app.use((req: any,res: any,next: any) => {
+app.use((req: { method: any; url: any; }, res: any, next: () => void) => {
   console.log(`[Server] ${req.method} ${req.url}`);
   next();
 });
 
-
+// Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/rooms', roomRoutes);
 
-//error handling
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error(err.stack);
-  res.status(500).json({ message: 'Internal server error' });
-})
+// Database Connection
+const connectDB = async () => {
+  const mongoUri = process.env.MONGODB_URI;
+  if (!mongoUri) {
+    throw new Error('MongoDB URI is not defined. Set MONGODB_URI environment variable.');
+  }
+  try {
+    await mongoose.connect(mongoUri);
+    console.log('MongoDB connected...');
+  } catch (err) {
+    console.error('MongoDB connection error:', err);
+    process.exit(1);
+  }
+};
 
-//create http server
+// LowDB Setup for Drawing Lines
+type Point = { x: number; y: number };
+type DrawingLine = {
+  points: Point[];
+  color: string;
+  width: number;
+};
+type Data = { drawingLines: DrawingLine[] };
+
+const adapter = new JSONFile<Data>('db.json');
+const db = new Low(adapter, { drawingLines: [] });
+
+let drawingLines: DrawingLine[] = [];
+
+// Initialize LowDB
+(async () => {
+  await db.read();
+  db.data ||= { drawingLines: [] };
+  drawingLines = db.data.drawingLines;
+})();
+
+// HTTP Server with Socket.io
 const server = createServer(app);
-
 const io = new Server(server, {
   cors: {
     origin: allowedOrigins,
-    allowedHeaders: ['Content-Type', 'Authorization'],
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -73,55 +96,30 @@ const io = new Server(server, {
   }
 });
 
-type Point = { x: number; y: number };
-type DrawingLine = {
-  points: Point[];
-  color: string;
-  width: number;
-};
-
-let drawingLines: DrawingLine[] = [];
-
-// Add database persistence (install lowdb)
-type Data = { drawingLines: DrawingLine[] };
-const adapter = new JSONFile<Data>('db.json');
-const db = new Low(adapter, { drawingLines: [] });
-
-
-// Initialize data
-(async () => {
-  await db.read();
-  db.data ||= { drawingLines: [] };
-  drawingLines = db.data.drawingLines;
-})();
-
-
-// Connection handler
+// Socket.io Handlers
 io.on('connection', (socket: Socket) => {
   console.log('New client connected:', socket.id);
 
-  // Send existing drawing to new client
+  // Send initial drawing state
   socket.emit('initial-state', drawingLines);
 
   socket.on('draw', async (line: DrawingLine) => {
-    // Add the new line segment to our drawing
     drawingLines.push(line);
-    try{
-      await db.write(); // Save to file
-      // Broadcast to all other clients
+    try {
+      await db.write();
       socket.broadcast.emit('draw', line);
     } catch (err) {
-      console.error('DB write error:', err)
+      console.error('DB write error:', err);
     }
   });
 
   socket.on('clear', async () => {
     drawingLines = [];
-    try{
+    try {
       await db.write();
       io.emit('clear');
     } catch (err) {
-      console.error('DB write error:', err)
+      console.error('DB write error:', err);
     }
   });
 
@@ -130,40 +128,44 @@ io.on('connection', (socket: Socket) => {
   });
 });
 
-const PORT = process.env.PORT ? parseInt(process.env.PORT) : 5000;
+// Error Handling
+app.use((err: { stack: any; }, req: any, res: { status: (arg0: number) => { (): any; new(): any; json: { (arg0: { message: string; }): void; new(): any; }; }; }, next: any) => {
+  console.error(err.stack);
+  res.status(500).json({ message: 'Internal server error' });
+});
 
-//fixed server startup sequence
-if (!process.env.MONGO_URI) {
-  throw new Error('MONGO_URI environment variable is not defined');
-}
-
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => {
-    console.log('Mongodb connected');
+// Start Server
+const startServer = async () => {
+  try {
+    await connectDB();
+    const PORT = process.env.PORT ? parseInt(process.env.PORT) : 5000;
     server.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
-          // Temporarily log JWT_SECRET here to confirm it loads at startup
-        console.log(`[Server] JWT_SECRET loaded: ${!!process.env.JWT_SECRET}`); // Checks if it's truthy
-        if (!process.env.JWT_SECRET) {
-            console.error('[Server ERROR] JWT_SECRET is NOT set in environment variables!');
-        }
-    })
-  })
-  .catch((err: Error)=> {
-    console.error('MongoDB connection error:',err);
+      console.log(`[Server] JWT_SECRET loaded: ${!!process.env.JWT_SECRET}`);
+      if (!process.env.JWT_SECRET) {
+        console.error('[Server ERROR] JWT_SECRET is NOT set in environment variables!');
+      }
+    });
+  } catch (err) {
+    console.error('Failed to start server:', err);
     process.exit(1);
-  })
+  }
+};
 
+// Start if not in test environment
+if (process.env.NODE_ENV !== 'test') {
+  startServer();
+}
 
-
-// Add a global uncaught exception handler (for synchronous errors not in try/catch)
+// Global Error Handlers
 process.on('uncaughtException', (err: Error) => {
-    console.error('[CRITICAL] Uncaught Exception:', err);
-    process.exit(1); // Exit process after logging
+  console.error('[CRITICAL] Uncaught Exception:', err);
+  process.exit(1);
 });
 
-// Add a global unhandled rejection handler (for unhandled Promise rejections)
 process.on('unhandledRejection', (reason: unknown, promise: Promise<any>) => {
-    console.error('[CRITICAL ERROR] Unhandled Rejection at:', promise, 'reason:', reason);
-    process.exit(1); // Exit process after logging
+  console.error('[CRITICAL ERROR] Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
 });
+
+export default app;
