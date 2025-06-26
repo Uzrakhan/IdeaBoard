@@ -11,14 +11,85 @@ const Auth: React.FC = () => {
     const [isLogin, setIsLogin] = useState(true);
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
+    const [globalError, setGlobalError] = useState(''); // For general authentication errors
+    const [usernameError, setUsernameError] = useState(''); // For username specific errors
+    const [passwordError, setPasswordError] = useState(''); // For password specific errors
     const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
     const { login: authLogin } = useAuth(); // Get login function from AuthContext
 
+    //Validation logic
+    const validateUsername = (username: string): string => {
+        if(!username.trim()) {
+            return 'Username is required.'
+        }
+        if(username.length < 3) {
+            return 'Username must be at least 3 characters.'
+        }
+
+        if (username.length > 20) {
+            return 'Username cannot exceed 20 characters.';
+        }
+
+        //more specific username validation if
+        if(!/^[a-zA-Z0-9_]+$/.test(username)) {
+            return 'Username can only contain letters, numbers, and underscores.';
+        }
+
+        return '';
+    }
+
+    const validatePassword = (password: string): string => {
+        if(!password) {
+            return 'Password is required.'
+        }
+
+        if (password.length < 6) {
+            return 'Password must be at least 6 characters long.';
+        }
+
+        if (password.length > 50) {
+            return 'Password cannot exceed 50 characters.';
+        }
+
+        const hasUppercase = /[A-Z]/.test(password);
+        const hasLowercase = /[a-z]/.test(password);
+        const hasNumber = /[0-9]/.test(password);
+        const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+        if (!hasUppercase || !hasLowercase || !hasNumber || !hasSpecialChar) {
+           return 'Password must include uppercase, lowercase, number, and special character.';
+        }
+
+        return '';
+    }
+
+    const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setUsername(value);
+        setUsernameError(validateUsername(value))
+    }
+
+    const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setPassword(value);
+        setPasswordError(validatePassword(value)); // Validate on change
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError('');
+        setGlobalError('')
+
+        const usernameErrMsg = validateUsername(username);
+        const passwordErrMsg = validatePassword(password);
+
+        setUsernameError(usernameErrMsg);
+        setPasswordError(passwordErrMsg);
+
+        if (usernameErrMsg || passwordErrMsg) {
+            return;
+        }
+
+
         setIsLoading(true);
 
         try {
@@ -31,7 +102,7 @@ const Auth: React.FC = () => {
             
             navigate('/'); // Redirect to home after successful auth
         } catch(err:any) {
-            setError(err.response?.data?.message || 'Authentication failed')
+            setGlobalError(err.response?.data?.message || 'Authentication failed')
         } finally {
             setIsLoading(false);
         }
@@ -54,9 +125,9 @@ const Auth: React.FC = () => {
                     </p>
                 </div>
 
-                {error && (
+                {globalError && (
                     <div className="bg-red-50 text-red-700 p-3 rounded-md">
-                        {error}
+                        {globalError}
                     </div>
                 )}
 
@@ -70,11 +141,14 @@ const Auth: React.FC = () => {
                                 id="username"
                                 name="username"
                                 type="text"
-                                required
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none ${usernameError ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-indigo-500 focus:border-indigo-500'}`}
                                 value={username}
-                                onChange={(e) => setUsername(e.target.value)}
+                                onChange={handleUsernameChange}
+                                onBlur={() => setUsernameError(validateUsername(username))} // Validate on blur as well
                             />
+                            {usernameError && (
+                                <p className="mt-2 text-sm text-red-600">{usernameError}</p>
+                            )}
                         </div>
 
                         <div>
@@ -85,18 +159,21 @@ const Auth: React.FC = () => {
                                 id="password"
                                 name="password"
                                 type="password"
-                                required
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none ${passwordError ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-indigo-500 focus:border-indigo-500'}`}
                                 value={password}
-                                onChange={(e) => setPassword(e.target.value)}
+                                onChange={handlePasswordChange}
+                                onBlur={() => setPasswordError(validatePassword(password))} // Validate on blur as well
                             />
+                            {passwordError && (
+                                <p className="mt-2 text-sm text-red-600">{passwordError}</p>
+                            )}
                         </div>
                     </div>
 
                     <div>
                         <button
                             type="submit"
-                            disabled={isLoading}
+                            disabled={isLoading || !!usernameError || !!passwordError}
                             className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
                         >
                             {isLoading ? (
@@ -118,7 +195,15 @@ const Auth: React.FC = () => {
 
                 <div className="mt-6 text-center">
                     <button
-                        onClick={() => setIsLogin(!isLogin)}
+                        onClick={() => {
+                            setIsLogin(!isLogin)
+                            setUsername('');
+                            setPassword('')
+                            setUsernameError('')
+                            setPasswordError('')
+                            setGlobalError('')
+                        }
+                        }
                         className="text-indigo-600 hover:text-indigo-800 font-medium"
                     >
                         {isLogin 
