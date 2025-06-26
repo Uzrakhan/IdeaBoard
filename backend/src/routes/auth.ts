@@ -1,12 +1,21 @@
 import express from 'express';
+
+/*
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import User from '../models/User';
 import { body, validationResult } from 'express-validator';
+*/
 
 const router = express.Router();
 
+// --- TEMPORARY DIAGNOSTIC ROUTE  ---//
+router.post('/test-subroute', (req: any,res: { status: (arg0: number) => { (): any; new(): any; json: { (arg0: { message: string; }): void; new(): any; }; }; }) => {
+    console.log('[DIAGNOSTIC AUTH ROUTER] Hit temporary /test-subroute!');
+    res.status(200).json({ message: 'Auth sub-route hit successfully!' });
+})
 //validation rules for username & password
+/*
 const usernameValidationRules = [
     body('username', 'Username is required.').not().isEmpty(),
     body('username', 'Username must be at least 3 characters long.').isLength({ min: 3 }),
@@ -114,5 +123,6 @@ router.post('/login', [
         res.status(500).json({ message: 'Server error' });
     }
 });
+*/
 
 export default router;
