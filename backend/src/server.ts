@@ -32,6 +32,7 @@ app.use(
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
+    optionsSuccessStatus: 200
   })
 );
 
@@ -40,6 +41,13 @@ app.use((req: { method: any; url: any; }, res: any, next: () => void) => {
   console.log(`[Server] ${req.method} ${req.url}`);
   next();
 });
+
+// --- TEMPORARY DIAGNOSTIC ROUTE (add this line) ---
+app.post('/api/auth/test', (req: any, res: { status: (arg0: number) => { (): any; new(): any; json: { (arg0: { message: string; }): void; new(): any; }; }; }) => {
+    console.log('[DIAGNOSTIC] /api/auth/test route hit!');
+    res.status(200).json({ message: 'Test route hit!' });
+});
+// --- END TEMPORARY DIAGNOSTIC ROUTE ---
 
 // Routes
 app.use('/auth', authRoutes);
