@@ -49,6 +49,7 @@ app.use('/api/rooms', roomRoutes);
 const connectDB = async () => {
   const mongoUri = process.env.MONGODB_URI;
   if (!mongoUri) {
+    console.error('MongoDB URI is not defined.')
     throw new Error('MongoDB URI is not defined. Set MONGODB_URI environment variable.');
   }
   try {
@@ -56,7 +57,7 @@ const connectDB = async () => {
     console.log('MongoDB connected...');
   } catch (err) {
     console.error('MongoDB connection error:', err);
-    process.exit(1);
+    throw err;
   }
 };
 
