@@ -14,8 +14,8 @@ dotenv.config();
 
 const app = express();
 const allowedOrigins = [
-  'http://localhost:5173',
-  'https://idea-board-virid.vercel.app'
+  'https://idea-board-virid.vercel.app/',
+  'http://localhost:5173'
 ];
 
 // Middleware
@@ -42,8 +42,8 @@ app.use((req: { method: any; url: any; }, res: any, next: () => void) => {
 });
 
 // Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/rooms', roomRoutes);
+app.use('/auth', authRoutes);
+app.use('/rooms', roomRoutes);
 
 // Database Connection
 const connectDB = async () => {
