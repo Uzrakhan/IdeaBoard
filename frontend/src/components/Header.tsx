@@ -15,7 +15,7 @@ const Header: React.FC<HeaderProps> = ({onLogout}) => {
   }
 
   return (
-        <header className="bg-indigo-700 text-white shadow-md">
+    <header className="bg-indigo-900 text-white shadow-md">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         <Link to="/" className="flex items-center space-x-2">
           <div className="bg-white p-1 rounded-full">
