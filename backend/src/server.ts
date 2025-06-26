@@ -14,7 +14,7 @@ dotenv.config();
 
 const app = express();
 const allowedOrigins = [
-  'https://idea-board-virid.vercel.app/',
+  'https://idea-board-virid.vercel.app',
   'http://localhost:5173'
 ];
 
