@@ -50,7 +50,7 @@ app.post('/api/auth/test', (req: any, res: { status: (arg0: number) => { (): any
 // --- END TEMPORARY DIAGNOSTIC ROUTE ---
 
 // Routes
-app.use('/auth', authRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/rooms', roomRoutes);
 
 // Database Connection

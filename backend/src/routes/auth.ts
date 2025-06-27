@@ -32,7 +32,7 @@ const passwordValidationRules = [
 ]
 
 
-router.post('/api/auth/signup', [...usernameValidationRules, ...passwordValidationRules],
+router.post('/signup', [...usernameValidationRules, ...passwordValidationRules],
     async (req: express.Request, res: express.Response) => {
         console.log('[Signup Request] Received body:', req.body);
         //check for validation errors
@@ -77,7 +77,7 @@ router.post('/api/auth/signup', [...usernameValidationRules, ...passwordValidati
         }
 });
 
-router.post('/api/auth/login', [
+router.post('/login', [
     body('username', 'Username is required.').not().isEmpty(),
     body('password', 'Password is required.').not().isEmpty()
 ],
