@@ -1,11 +1,9 @@
 import express from 'express';
-
-/*
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import User from '../models/User';
 import { body, validationResult } from 'express-validator';
-*/
+
 
 const router = express.Router();
 
@@ -15,7 +13,6 @@ router.post('/test-subroute', (req: any,res: { status: (arg0: number) => { (): a
     res.status(200).json({ message: 'Auth sub-route hit successfully!' });
 })
 //validation rules for username & password
-/*
 const usernameValidationRules = [
     body('username', 'Username is required.').not().isEmpty(),
     body('username', 'Username must be at least 3 characters long.').isLength({ min: 3 }),
@@ -35,7 +32,7 @@ const passwordValidationRules = [
 ]
 
 
-router.post('/signup', [...usernameValidationRules, ...passwordValidationRules],
+router.post('/api/auth/signup', [...usernameValidationRules, ...passwordValidationRules],
     async (req: express.Request, res: express.Response) => {
         console.log('[Signup Request] Received body:', req.body);
         //check for validation errors
@@ -80,7 +77,7 @@ router.post('/signup', [...usernameValidationRules, ...passwordValidationRules],
         }
 });
 
-router.post('/login', [
+router.post('/api/auth/login', [
     body('username', 'Username is required.').not().isEmpty(),
     body('password', 'Password is required.').not().isEmpty()
 ],
@@ -123,6 +120,6 @@ router.post('/login', [
         res.status(500).json({ message: 'Server error' });
     }
 });
-*/
+
 
 export default router;
