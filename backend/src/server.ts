@@ -51,7 +51,7 @@ app.post('/api/auth/test', (req: any, res: { status: (arg0: number) => { (): any
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/rooms', roomRoutes);
+app.use('/api/rooms', roomRoutes);
 
 // Database Connection
 const connectDB = async () => {
