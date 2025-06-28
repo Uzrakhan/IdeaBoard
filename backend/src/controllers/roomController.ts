@@ -62,7 +62,7 @@ export const createRoom = async (req:any, res:any) => {
     const savedRoom = await newRoom.save();
     console.log('[CreateRoom] Room created successfully:', savedRoom);
     
-    res.status(201).json(savedRoom);
+    res.status(201).json({ message: 'Room created successfully', room: savedRoom });
   } catch (error:any) {
     console.error('----- [CreateRoom] CAUGHT EXCEPTION -----');
     console.error('[CreateRoom] Critical error message:', error.message);

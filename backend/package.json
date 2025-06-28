@@ -6,7 +6,7 @@
     "scripts": {
         "build": "tsc",
         "start": "node dist/server.js",
-        "test": "cross-env NODE_ENV=test tsx --test __tests__/auth.test.ts"
+        "test": "cross-env NODE_ENV=test tsx --test __tests__/**/*.ts"
     },
     "keywords": [],
     "author": "",
