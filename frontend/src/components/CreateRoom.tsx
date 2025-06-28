@@ -22,7 +22,7 @@ const CreateRoom: React.FC<CreateRoomProps> = ({ onRoomCreated }) => {
         try {
             // Create room
             const response = await createRoom();
-            const roomCode= response.data.roomCode;
+            const roomCode= response.data.room.roomCode;
             const newRoomLink = `${window.location.origin}/join/${roomCode}`;
             
             // Store room ID and link
