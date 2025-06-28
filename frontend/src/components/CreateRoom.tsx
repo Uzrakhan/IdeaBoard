@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 
 interface CreateRoomProps {
   onRoomCreated: (room: Room) => void;
- //setCurrentRoom: (room: import('../types').Room) => void;
+ setCurrentRoom: (room: import('../types').Room) => void;
 }
 
 const CreateRoom: React.FC<CreateRoomProps> = ({ onRoomCreated }) => {
