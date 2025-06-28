@@ -70,7 +70,7 @@ router.post('/signup', [...usernameValidationRules, ...passwordValidationRules],
             });
 
             console.log(`[Signup Success] User ${username} created with ID: ${newUser._id}`);
-            res.status(201).json({ token, userId: newUser._id })
+            res.status(201).json({ token, userId: newUser._id, username: newUser.username })
         }catch(err: any) {
             console.error('Signup error:', err.message); // Log the actual error
             res.status(500).json({ message: 'Server error' });

@@ -5,7 +5,8 @@
     "main": "src/server.ts",
     "scripts": {
         "build": "tsc",
-        "start": "node dist/server.js"
+        "start": "node dist/server.js",
+        "test": "cross-env NODE_ENV=test tsx --test __tests__/auth.test.ts"
     },
     "keywords": [],
     "author": "",
@@ -33,10 +34,12 @@
         "@types/socket.io": "^3.0.1",
         "@types/supertest": "^6.0.3",
         "bcryptjs": "^3.0.2",
+        "cross-env": "^7.0.3",
         "jest": "^30.0.2",
         "mongodb-memory-server": "^10.1.4",
         "supertest": "^7.1.1",
         "ts-node": "^10.9.2",
+        "tsx": "^4.20.3",
         "typescript": "^5.8.3"
     }
 }
