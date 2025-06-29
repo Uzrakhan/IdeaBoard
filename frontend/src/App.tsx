@@ -74,7 +74,7 @@ const App: React.FC = () => {
   const onRoomCreated = (room: Room) => {
     setCurrentRoom(room);
     console.log(`Frontend: Room created with code: ${room.roomCode}. Redirecting...`);
-    navigate(`/room/${room.roomCode}`); // Redirect to the new room's page
+    //navigate(`/room/${room.roomCode}`);  // No longer navigate immediately
   }
 
   return (
@@ -157,7 +157,7 @@ const App: React.FC = () => {
 // --- NEW WRAPPER FOR WHITEBOARD ---
 // This ensures Whiteboard fetches its own room data when the URL changes
 interface WhiteboardWrapperProps {
-  setCurrentRoom: (room: Room) => void;
+  setCurrentRoom: (room: Room | null) => void; // Allow null for resetting
 }
 
 const WhiteboardWrapper: React.FC<WhiteboardWrapperProps> = ({ setCurrentRoom }) => {
@@ -175,6 +175,7 @@ const WhiteboardWrapper: React.FC<WhiteboardWrapperProps> = ({ setCurrentRoom })
         return;
       }
       setLoading(true);
+      setError(null); //clear previous errors
       try {
         const response = await getRoom(roomCode);
         console.log("Fetched room data:", response.data); // Added this line
@@ -203,7 +204,7 @@ const WhiteboardWrapper: React.FC<WhiteboardWrapperProps> = ({ setCurrentRoom })
 // Wrapper for JoinRoom to handle room loading
 interface JoinRoomWrapperProps {
   currentRoom: Room | null; // Currently active room
-  setCurrentRoom: (room: Room) => void;// Function to update active room
+  setCurrentRoom: (room: Room | null) => void;// Function to update active room
 }
 
 // Wrapper component for joining a room
