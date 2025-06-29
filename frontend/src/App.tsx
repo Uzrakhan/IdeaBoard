@@ -41,7 +41,7 @@ const App: React.FC = () => {
 
   const [loadingAuth, setLoadingAuth] = useState(true);
 
-  const navigate = useNavigate();
+  //const navigate = useNavigate();
 
   //Check user authetication on initial load
   useEffect(() => {
