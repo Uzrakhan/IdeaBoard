@@ -5,10 +5,10 @@ import { useNavigate } from 'react-router-dom';
 
 interface CreateRoomProps {
   onRoomCreated: (room: Room) => void;
- setCurrentRoom: (room: import('../types').Room) => void;
+ setCurrentRoom: (room : Room | null) => void;
 }
 
-const CreateRoom: React.FC<CreateRoomProps> = ({ onRoomCreated }) => {
+const CreateRoom: React.FC<CreateRoomProps> = ({ onRoomCreated, setCurrentRoom }) => {
     const [roomLink, setRoomLink] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
@@ -36,10 +36,12 @@ const CreateRoom: React.FC<CreateRoomProps> = ({ onRoomCreated }) => {
             try {
                 const roomResponse = await getRoom(roomCode);
                 onRoomCreated(roomResponse.data); // Passes the created room data to a parent component
+                setCurrentRoom(roomResponse.data); // Pass the full room object
             } catch (err) {
                 console.error('Failed to fetch room details, but room was created', err);
                 // You might want to pass a partial room object if fetching fails
                 onRoomCreated({ roomCode, owner: '', members: [], _id: '' } as unknown as Room); // Cast as Room for type compatibility
+                setCurrentRoom(null); // Set to null if fetch fails, or pass partial if needed
             }
             //Show the link section (instead of navigating immediately)
             setShowLinkSection(true);

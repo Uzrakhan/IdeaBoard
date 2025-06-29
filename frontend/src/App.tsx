@@ -209,18 +209,35 @@ interface JoinRoomWrapperProps {
 
 // Wrapper component for joining a room
 const JoinRoomWrapper: React.FC<JoinRoomWrapperProps> = ({ currentRoom, setCurrentRoom }) => {
-  const { roomId } = useParams<{ roomId: string }>(); // Extract room ID from URL
+  const { roomCode } = useParams<{ roomCode: string }>(); // Extract room code from URL
   const navigate = useNavigate();// Hook for navigation
   const [isLoading, setIsLoading] = useState(true); // State to track loading status
   const [error, setError] = useState('');// State to track errors
 
-  // Fetch room details when roomId changes
+  // Effect to fetch room details
   useEffect(() => {
     const fetchRoom = async () => {
-      if (!roomId) return;
+      if (!roomCode) {
+        setIsLoading(false);
+        setError("Room code is missing in URL.");
+        return
+      }
       
+      // If currentRoom is already set and matches the URL, no need to refetch
+      // unless we need to ensure the most up-to-date member status.
+      // For a simple check, we can skip fetch if already loaded.
+      if (currentRoom && currentRoom.roomCode === roomCode && isLoading) {
+        // Check member status here to decide immediate redirect
+        const userId = localStorage.getItem('userId');
+        const isApprovedMember = currentRoom.members.some(
+          m => m.user._id === userId && m.status === "approved"
+        );
+        if (isApprovedMember) {
+          
+        }
+      }
       try {
-        const response = await getRoom(roomId);// Fetch room data from API
+        const response = await getRoom(roomCode);// Fetch room data from API
         setCurrentRoom(response.data);// Update current room state
       } catch (err: any) {
         setError(err.response?.data?.message || 'Failed to load room');// Handle API errors
@@ -230,7 +247,7 @@ const JoinRoomWrapper: React.FC<JoinRoomWrapperProps> = ({ currentRoom, setCurre
     };
     
     fetchRoom();
-  }, [roomId, setCurrentRoom]);
+  }, [roomCode, setCurrentRoom]);
 
 
   // Redirect user to the whiteboard if they are an approved member
