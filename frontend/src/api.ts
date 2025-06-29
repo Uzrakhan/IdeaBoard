@@ -14,11 +14,11 @@ const api = axios.create({
 // Add request interceptor to attach token
 api.interceptors.request.use(config => {
   const token = localStorage.getItem('token');
-  if (token) {
+  if (token && !config.url?.includes('/auth/')) {
     config.headers.Authorization = `Bearer ${token}`;
     console.log('Token being sent in Authorization header:', token);
-  }else {
-    console.warn('No token found in localStorage');
+  }else if(!config.url?.includes('/auth/')){
+    console.warn('No token found in localStorage for a non-auth request');
   }
   return config;
 }, error => {
@@ -31,7 +31,8 @@ const handleError = (error: any) => {
     console.error('API Error:', {
       status: error.response.status,
       data: error.response.data,
-      headers: error.response.headers
+      headers: error.response.headers,
+      config: error.config // Added config to log more context
     });
     } else if (error.request) {
         console.error('No Response:', error.request);
@@ -42,19 +43,15 @@ const handleError = (error: any) => {
 }
 
 export const login = (username: string, password: string) => 
-    api.post(`/auth/login`, { username, password }, {
-        headers: { 'Content-Type': 'application/json' }
-    })
+    api.post(`/auth/login`, { username, password })
         .catch(handleError)
 
 
 export const signup = (username: string, password: string) => 
-    api.post(`/auth/signup`, { username, password }, {
-    headers: { 'Content-Type': 'application/json' }
-    })
+    api.post(`/auth/signup`, { username, password })
         .catch(handleError);
 
-        /*
+/*
 export const createRoom = () => 
     api.post(`/rooms`, {}, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
@@ -68,11 +65,7 @@ export const createRoom = async () => {
     console.log('Room creation response:', response.data);
     return response;
   } catch (error:any) {
-    console.error('Full room creation error:', {
-      status: error.response?.status,
-      data: error.response?.data,
-      config: error.config
-    });
+    handleError(error);
     throw error;
   }
 };
@@ -80,25 +73,19 @@ export const createRoom = async () => {
 
 
 export const joinRoom = (roomCode: string) =>
-    api.post(`/rooms/${roomCode}/join`, {}, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-    })
+    api.post(`/rooms/${roomCode}/join`)
         .catch(handleError);
 
 export const getRoom = (roomCode: string) => 
-    api.get(`/rooms/${roomCode}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-    })
+    api.get(`/rooms/${roomCode}`)
         .catch(handleError);
 
 
-export const handleRoomRequest = (
+export const updateRoomMemberStatus = (
     roomCode: string,
-    userId: string,
-    action: 'approve' | 'reject'
+    memberId: string,
+    status: 'approved' | 'rejected'
 ) => 
-    api.put(`/rooms/${roomCode}/requests/${userId}`, { action }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-    });
+    api.put(`/rooms/${roomCode}/members/${memberId}/status`, { status }).catch(handleError)
 
 

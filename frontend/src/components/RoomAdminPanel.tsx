@@ -1,5 +1,5 @@
 import React from 'react';
-import { handleRoomRequest } from '../api';
+import { updateRoomMemberStatus } from '../api';
 import type { Room } from '../types';
 
 interface RoomAdminPanelProps {
@@ -10,18 +10,18 @@ interface RoomAdminPanelProps {
 const RoomAdminPanel: React.FC<RoomAdminPanelProps> = ({ room, setRoom }) => {
     const pendingRequests = room.members.filter(m => m.status === 'pending');
 
-    const handleRequest = async (userId: string, action: 'approve' | 'reject') => {
+    const handleRequest = async (userId: string, status: 'approved' | 'rejected') => {
         try {
-            await handleRoomRequest(room.roomCode, userId, action);
+            await updateRoomMemberStatus(room.roomCode, userId, status);
             setRoom(prev => {
                 if (!prev) return null;
 
                 let updatedMembers = prev.members;
-                if (action === 'approve') {
+                if (status === 'approved') {
                     updatedMembers = prev.members.map(member =>
                         member.user._id === userId ? { ...member, status: 'approved' } : member
                     );
-                } else if (action === 'reject') {
+                } else if (status === 'rejected') {
                     updatedMembers = prev.members.filter(member => member.user._id !== userId);
                 }
 
@@ -45,13 +45,13 @@ const RoomAdminPanel: React.FC<RoomAdminPanelProps> = ({ room, setRoom }) => {
                                 <span>{request.user.username}</span>
                                 <div className="actions">
                                     <button 
-                                        onClick={() => handleRequest(request.user._id, 'approve')}
+                                        onClick={() => handleRequest(request.user._id, 'approved')}
                                         className="approve-btn"
                                     >
                                         Approve
                                     </button>
                                     <button 
-                                        onClick={() => handleRequest(request.user._id, 'reject')}
+                                        onClick={() => handleRequest(request.user._id, 'rejected')}
                                         className="reject-btn"
                                     >
                                         Reject
