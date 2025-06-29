@@ -4,16 +4,16 @@ import type { Room } from '../types';
 
 interface RoomAdminPanelProps {
     room: Room;
-    setRoom: React.Dispatch<React.SetStateAction<Room | null>>;
+    setCurrentRoom: React.Dispatch<React.SetStateAction<Room | null>>;
 }
 
-const RoomAdminPanel: React.FC<RoomAdminPanelProps> = ({ room, setRoom }) => {
+const RoomAdminPanel: React.FC<RoomAdminPanelProps> = ({ room, setCurrentRoom }) => {
     const pendingRequests = room.members.filter(m => m.status === 'pending');
 
     const handleRequest = async (userId: string, status: 'approved' | 'rejected') => {
         try {
             await updateRoomMemberStatus(room.roomCode, userId, status);
-            setRoom(prev => {
+            setCurrentRoom(prev => {
                 if (!prev) return null;
 
                 let updatedMembers = prev.members;

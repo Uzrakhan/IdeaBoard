@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { socket } from '../socket';
 import type { Room } from '../types';
 import { useAuth } from '../context/AuthContext';
+import RoomAdminPanel from './RoomAdminPanel';
 /*
 // Mock room data - in a real app, this would come from an API
 const mockRoom: Room = {
@@ -23,6 +24,7 @@ const mockRoom: Room = {
 
 interface WhiteboardProps {
   room: Room;
+  setCurrentRoom: React.Dispatch<React.SetStateAction<Room | null>>;
 }
 
 type Point = { x: number; y: number };
@@ -32,7 +34,7 @@ type DrawingLine = {
   width: number;
 };
 
-const Whiteboard: React.FC<WhiteboardProps> = ({ room }) => {
+const Whiteboard: React.FC<WhiteboardProps> = ({ room, setCurrentRoom }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -44,12 +46,15 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ room }) => {
   const linesRef = useRef<DrawingLine[]>([]);
   const redrawTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [canvasDimensions, setCanvasDimensions] = useState({ width: 0, height: 0 });
-
+  //const [message,setMessage] = useState('');// For Socket.IO notifications
   //access room details directtly from teh 'room' prop
   const currentRoom = room;
 
   // Use the auth context to get the current user
   const { currentUser } = useAuth();
+
+  //determine if current user is owner
+  const isOwner = currentUser && room.owner._id === currentUser._id;
 
   // Keep refs updated with current state
   useEffect(() => {
@@ -300,148 +305,140 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ room }) => {
   };
 
   return (
-    <div className='bg-gray-100 min-h-screen'>
-      <div className='max-w-7xl mx-auto px-4 py-6'>
-        <div className='bg-white rounded-xl shadow-md mb-6 p-4'>
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
-            <div>
-              <h1 className='texy-xl font-bold text-gray-800'>
-                Collaboration Room: <span className='text-indigo-600'>
-                  {currentRoom.roomCode}
-                </span>
-              </h1>
-              <p className='text-gray-600'>
-                Created by: {currentRoom.owner.username}
-              </p>
-            </div>
+    <div className='bg-gray-100 min-h-screen font-inter'> {/* Added font-inter to root div */}
+            <div className='max-w-7xl mx-auto px-4 py-6'>
+                <div className='bg-white rounded-xl shadow-md mb-6 p-4'>
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
+                        <div>
+                            <h1 className='text-xl font-bold text-gray-800'>
+                                Collaboration Room: <span className='text-indigo-600'>
+                                    {room.roomCode} {/* Use 'room' prop directly */}
+                                </span>
+                            </h1>
+                            <p className='text-gray-600'>
+                                Created by: {room.owner.username} {/* Use 'room' prop directly */}
+                            </p>
+                        </div>
 
-            <div className='mt-4 md:mt-0 flex items-cenetr space-x-4'>
-              <div className='flex space-x-2'>
-                {currentRoom.members
-                  .filter(m => m.status === "approved")
-                  .slice(0,3)
-                  .map((member,index) => {
-                      console.log("Member:", member);
-                      console.log("Member user:", member ? member.user : 'member is undefined');
-                      console.log("Member username:", member && member.user ? member.user.username : 'member or user is undefined');
-                    return (
-                    <div key={index} className='bg-indigo-100 w-8 h-8 rounded-full flex items-center justify-center border-2 border-white'>
-                      <span className='text-indigo-700 text-xs font-medium'>
-                        {member?.user?.username?.charAt(0)}
-                      </span>
+                        <div className='mt-4 md:mt-0 flex items-center space-x-4'>
+                            <div className='flex space-x-2'>
+                                {room.members
+                                    .filter(m => m.status === "approved")
+                                    .slice(0, 3)
+                                    .map((member, index) => (
+                                        <div key={member.user._id || index} className='bg-indigo-100 w-8 h-8 rounded-full flex items-center justify-center border-2 border-white'>
+                                            <span className='text-indigo-700 text-xs font-medium'>
+                                                {member?.user?.username?.charAt(0)}
+                                            </span>
+                                        </div>
+                                    ))}
+                                {room.members.filter(m => m.status === "approved").length > 3 && (
+                                    <div className='bg-gray-200 w-8 h-8 rounded-full flex items-center justify-center border-2 border-white'>
+                                        <span className='text-gray-600 text-xs'>
+                                            +{room.members.filter(m => m.status === "approved").length - 3}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                            <button
+                                onClick={handleInviteClick}
+                                className='bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1 rounded-full text-sm'
+                            >
+                                Invite
+                            </button>
+                        </div>
                     </div>
-                  )})}
-                  {currentRoom.members.filter(m => m.status === "approved").length > 3 && (
-                    <div className='bg-gray-200 w-8 h-8 rounded-full flex items-center justify-center border-2 border-white'>
-                      <span className='text-gray-600 text-xs'>
-                        +{currentRoom.members.filter(m => m.status === "approved").length - 3}
-                      </span>
-                    </div>
-                  )}
-              </div>
-              <button
-                onClick={handleInviteClick}
-                className='bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1 rounded-full text-sm'
-              >
-                Invite
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className='bg-white rounded-xl shadow-md p-4 mb-6'>
-            <div className='flex flex-wrap gap-4'>
-                <div className="flex items-center">
-                  <div className="w-6 h-6 bg-black rounded-full mr-2" style={{ backgroundColor: color}}></div>
-                  <span>Pen</span>
                 </div>
 
-                <div className='flex items-center'>
-                  <div className="w-6 h-6 bg-white border border-gray-300 rounded-full mr-2" onClick={() => setColor('#FFFFFF')}>
-                    <span>Eraser</span>
-                  </div>
+                <div className='bg-white rounded-xl shadow-md p-4 mb-6'>
+                    <div className='flex flex-wrap gap-4'>
+                        {/* Pen/Eraser/Color/Size Controls */}
+                        <div className="flex items-center space-x-2"> {/* Grouping controls */}
+                            <button
+                                onClick={() => setColor('#000000')}
+                                className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center shadow-sm hover:border-indigo-500 transition-colors"
+                                style={{ backgroundColor: '#000000' }}
+                                title="Black Pen"
+                            ></button>
+                            <button
+                                onClick={() => setColor('#FFFFFF')}
+                                className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center bg-white shadow-sm hover:border-indigo-500 transition-colors"
+                                title="Eraser (White)"
+                            ></button>
+                            <input
+                                type='color'
+                                value={color}
+                                className='w-8 h-8 border-0 cursor-pointer rounded-full overflow-hidden'
+                                onChange={(e) => setColor(e.target.value)}
+                                title="Custom Color"
+                            />
+                        </div>
 
-                  <div className="flex items-center">
-                    <input type='color' value={color} className='w-8 h-8 border-0 cursor-pointer' onChange={(e) => setColor(e.target.value)}/>
-                    <span className='ml-2'>Color</span>
-                  </div>
-                  
-                  <div className='flex items-center'>
-                    <select className='border border-gray-300 rounded px-2 py-1' value={brushSize} 
-                    onChange={(e) => setBrushSize(Number(e.target.value))}
-                    >
-                      <option value={2}>Thin</option>
-                      <option value={5}>Medium</option>
-                      <option value={10}>Thick</option>
-                    </select>
-                  </div>
+                        <div className="flex items-center space-x-2">
+                            <select
+                                className='border border-gray-300 rounded px-2 py-1 text-sm text-gray-700 focus:ring-indigo-500 focus:border-indigo-500'
+                                value={brushSize}
+                                onChange={(e) => setBrushSize(Number(e.target.value))}
+                                title="Brush Size"
+                            >
+                                <option value={2}>Thin</option>
+                                <option value={5}>Medium</option>
+                                <option value={10}>Thick</option>
+                            </select>
+                        </div>
 
-                  <div className='flex items-center space-x-2'>
-                    <button className='bg-gray-200 hover:bg-gray-300 w-8 h-8 rounded flex items-center justify-center'>
-                      <span>↺</span>{/* Undo */}
-                    </button>
-                    <button className='bg-gray-200 hover:bg-gray-300 w-8 h-8 rounded flex items-center justify-center'>
-                      <span>↻</span>{/* Redo */}
-                    </button>
-                    <button className='bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded' onClick={clearBoard}>
-                      Clear
-                    </button>
-                  </div>
+                        <div className='flex items-center space-x-2'>
+                            {/* Undo/Redo - Placeholders */}
+                            <button
+                                className='bg-gray-200 hover:bg-gray-300 w-8 h-8 rounded flex items-center justify-center text-gray-700 text-lg font-bold'
+                                title="Undo"
+                            >
+                                <span>↺</span>
+                            </button>
+                            <button
+                                className='bg-gray-200 hover:bg-gray-300 w-8 h-8 rounded flex items-center justify-center text-gray-700 text-lg font-bold'
+                                title="Redo"
+                            >
+                                <span>↻</span>
+                            </button>
+                            <button
+                                className='bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm font-medium shadow-md'
+                                onClick={clearBoard}
+                                title="Clear Board"
+                            >
+                                Clear
+                            </button>
+                        </div>
+                    </div>
                 </div>
-            </div>
 
-            <div 
-              ref={containerRef}
-              className="bg-white rounded-xl shadow-md overflow-hidden"
-              style={{ height: '500px' }} // Fixed height for rectangular shape
-            >
-              <canvas
-                ref={canvasRef}
-                onMouseDown={startDrawing}
-                onMouseMove={draw}
-                onMouseUp={endDrawing}
-                onMouseLeave={endDrawing}
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={endDrawing}
-                className="w-full border border-gray-200 cursor-crosshair"
-                width={canvasDimensions.width}
-                height={canvasDimensions.height}
-              />
-            </div>
+                <div
+                    ref={containerRef}
+                    className="bg-white rounded-xl shadow-md overflow-hidden"
+                    style={{ height: '500px' }} // Fixed height for rectangular shape
+                >
+                    <canvas
+                        ref={canvasRef}
+                        onMouseDown={startDrawing}
+                        onMouseMove={draw}
+                        onMouseUp={endDrawing}
+                        onMouseLeave={endDrawing}
+                        onTouchStart={handleTouchStart}
+                        onTouchMove={handleTouchMove}
+                        onTouchEnd={endDrawing}
+                        className="w-full h-full border border-gray-200 cursor-crosshair" // Set h-full here too
+                        width={canvasDimensions.width}
+                        height={canvasDimensions.height}
+                    />
+                </div>
 
-            {/* Pending requests panel - only show for room owner */}
-            {/* TODO: Replace the mock currentUser with actual user from auth context or props */}
-            {currentUser && currentUser._id === currentRoom.owner?._id && currentRoom.members.some(m => m.status === 'pending') && (
-              <div className="bg-white rounded-xl shadow-md mt-6 p-4">
-                <h2 className='text-lg font-bold text-gray-800 mb-4'>
-                  Pending Join Requests
-                </h2>
-                <ul className='space-y-3'>
-                {currentRoom.members
-                  .filter(m => m.status === "pending")
-                  .map((member, index) => (
-                    <li key={index} className='flex justify-between items-center py-2 border-b border-gray-100'>
-                      <div className='flex items-center'>
-                        <div className="bg-gray-200 border-2 border-dashed rounded-xl w-8 h-8 mr-3" />
-                        <span>{member.user?.username || 'Unknown User'}</span> {/* Defensive check */}
-                      </div>
-                      <div className='flex space-x-2'>
-                        <button className='bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm'>
-                          Approve
-                        </button>
-                        <button className='bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm'>
-                          Reject
-                        </button>
-                      </div>
-                    </li>
-                  ))
-                }
-              </ul>
-              </div>
-            )}
-        </div>
-      </div>
+                {/* Room Admin Panel - only show for room owner */}
+                {isOwner && (
+                    <div className="bg-white rounded-xl shadow-md mt-6 p-4">
+                        <RoomAdminPanel room={room} setCurrentRoom={setCurrentRoom} />
+                    </div>
+                )}
+            </div>
     </div>
   );
 };
