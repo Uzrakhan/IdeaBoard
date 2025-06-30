@@ -228,7 +228,7 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ room, setCurrentRoom }) => {
     
     // Add to local storage and emit to server
     linesRef.current = [...linesRef.current, newLine];
-    socket.emit('draw', newLine);
+    socket.emit('draw', newLine, room.roomCode);
   };
 
   // Draw while moving
@@ -267,7 +267,7 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ room, setCurrentRoom }) => {
         updatedLine
       ];
       
-      socket.emit('draw', updatedLine);
+      socket.emit('draw', updatedLine, room.roomCode);
     }
     
     lastPointRef.current = point;
@@ -290,7 +290,7 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ room, setCurrentRoom }) => {
     }
     
     linesRef.current = [];
-    socket.emit('clear');
+    socket.emit('clear', room.roomCode);
   };
 
   // Touch event handlers

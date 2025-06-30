@@ -157,7 +157,7 @@ const App: React.FC = () => {
 // --- NEW WRAPPER FOR WHITEBOARD ---
 // This ensures Whiteboard fetches its own room data when the URL changes
 interface WhiteboardWrapperProps {
-  setCurrentRoom: (room: Room | null) => void; // Allow null for resetting
+  setCurrentRoom: React.Dispatch<React.SetStateAction<Room | null>> // Allow null for resetting
 }
 
 const WhiteboardWrapper: React.FC<WhiteboardWrapperProps> = ({ setCurrentRoom }) => {
@@ -198,7 +198,7 @@ const WhiteboardWrapper: React.FC<WhiteboardWrapperProps> = ({ setCurrentRoom })
     if (error) return <div className="error">{error}</div>;
     if (!room) return <Navigate to="/" />; // Should not happen if error handled
 
-    return <Whiteboard room={room} />;
+    return <Whiteboard room={room} setCurrentRoom={setCurrentRoom}/>;
 
 }
 
