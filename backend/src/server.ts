@@ -92,6 +92,11 @@ let drawingLines: DrawingLine[] = [];
 
 // HTTP Server with Socket.io
 const server = createServer(app);
+
+//Make connectedUsers map accessible globally  (within server.ts code)
+const connectedUsers = new Map<string, string>(); // userId -> socketId
+
+
 const io = new Server(server, {
   cors: {
     origin: allowedOrigins,
@@ -110,18 +115,50 @@ io.on('connection', (socket: Socket) => {
   console.log('New client connected:', socket.id);
 
   // Send initial drawing state
-  socket.emit('initial-state', drawingLines);
+  //socket.emit('initial-state', drawingLines);
 
-  socket.on('draw', async (line: DrawingLine) => {
-    drawingLines.push(line);
-    try {
+  // --- NEW: Handle client joining a specific room ---
+  socket.on('joinRoom', (roomCode: string, userId: string) => {
+    socket.join(roomCode); //make this socket join a Socket.IO room named by roomCode
+    connectedUsers.set(userId, socket.id)//store the user's socket id
+    console.log(`Socket ${socket.id} (User ${userId}) joined room ${roomCode}`);
+  });
+
+  // --- Refined 'draw' event handling ---
+  // Client sends the *updated* line object
+  socket.on('draw', async(line: DrawingLine, roomCode: string) => { // Client must send roomCode with draw events
+    const existingLineIndex = drawingLines.findIndex(l => 
+      l.points[0].x === line.points[0].x && l.points[0].y === line.points[0].y &&
+      l.color === line.color && l.width === line.width
+    );
+    if(existingLineIndex > -1) {
+      drawingLines[existingLineIndex] = line;
+    }else {
+      drawingLines.push(line)
+    }
+
+    try{
+      db.data!.drawingLines = drawingLines;
       await db.write();
-      socket.broadcast.emit('draw', line);
-    } catch (err) {
-      console.error('DB write error:', err);
+
+      io.to(roomCode).emit('draw',line)
+    }catch(err) {
+      console.error('DB write error (draw):', err)
     }
   });
 
+  socket.on('clear', async (roomCode: string) => {
+    drawingLines = [];
+    try{
+      db.data!.drawingLines = [];
+      await db.write();
+      io.to(roomCode).emit('clear'); // Emit clear event to the specific room
+    }catch(err) {
+      console.error('DB write error (clear):', err);
+    }
+  });
+  
+/*
   socket.on('clear', async () => {
     drawingLines = [];
     try {
@@ -131,10 +168,26 @@ io.on('connection', (socket: Socket) => {
       console.error('DB write error:', err);
     }
   });
+*/
 
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
+    //remove users from connectedUsers map on disconnect
+    for (let [key,value] of connectedUsers.entries())  {
+      if(value === socket.id) {
+        connectedUsers.delete(key);
+        console.log(`User ${key} removed from connected users.`);
+        break;
+      }
+    }
   });
+
+
+  socket.on('leaveRoom', (roomCode: string, userId: string) => {
+    socket.leave(roomCode);
+    connectedUsers.delete(userId);
+    console.log(`User ${userId} left room ${roomCode}.`);
+  })
 });
 
 // Error Handling
@@ -177,4 +230,4 @@ process.on('unhandledRejection', (reason: unknown, promise: Promise<any>) => {
   process.exit(1);
 });
 
-export default app;
+export default { app, io, connectedUsers };

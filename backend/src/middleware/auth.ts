@@ -1,7 +1,21 @@
 import jwt from 'jsonwebtoken';
 import User, { IUser } from "../models/User";
 import { Document } from 'mongoose'; // Needed if User is a Mongoose document
-import express from 'express';
+import express, { Request, Response } from 'express';
+import type { NextFunction } from 'express';
+
+// Define an interface to extend the Request object,
+// so TypeScript knows about the `user` property that our middleware adds.
+// This helps prevent TS errors when accessing `req.user` in controllers.
+export interface AuthRequest extends Request{
+    body: { status: any; };
+    params: { roomCode: any; memberId: any; };
+    get(arg0: string): string | undefined;
+    user? : {
+        id: string;
+        username?: string;
+    }
+}
 
 // Define a more specific type for the user payload coming from the JWT
 interface JwtPayload {
@@ -19,47 +33,41 @@ declare global {
   }
 }
 
-export const auth = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    const authHeader = req.headers['authorization'];
+export const auth = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    const authHeader = req.get('Authorization');
     console.log('Authorization Header:', authHeader);
 
     if (!authHeader) {
+        console.warn('[Auth Middleware] Authorization header required');
         return res.status(401).json({ message: 'Authorization header required' });
     }
 
-    
-    const token = typeof authHeader === 'string' ? authHeader.replace('Bearer ', '') : undefined;
-    console.log('Extracted Token:', token);
-    
-    if (!token) {
-        console.log('No token found. Sending 401.');
-        return res.status(401).json({ message: 'Authentication required' })
+    // Expected format: "Bearer TOKEN_STRING"
+    const tokenParts = authHeader.split(' ');
+    if(tokenParts.length !== 2 || tokenParts[0] !== 'Bearer') {
+        console.warn('[Auth Middleware] Invalid token format. Expected "Bearer <token>".');
+        return res.status(401).json({ message: 'Invalid token format.' });
     }
+    const token = tokenParts[1];
 
     try{
         // IMPORTANT: Ensure process.env.JWT_SECRET is actually defined in your Render environment variables.
         // If it's undefined, jwt.verify will throw an error.
-        if(!process.env.JWT_SECRET) {
-            console.error('[Auth Middleware] JWT_SECRET is not defined in environment variables.');
+        const jwtSecret = process.env.JWT_SECRET;
+
+        if(!jwtSecret) {
+            console.error('JWT_SECRET is not defined in environment variables.');
             return res.status(500).json({ message: 'Server configuration error: JWT_SECRET missing.' });
         }
 
         console.log('[Auth Middleware] Attempting to verify token:', token); // Log the token being verified
 
+        const decoded = jwt.verify(token, jwtSecret) as JwtPayload; // Cast to your JwtPayload interface
+        //attach user to request object
+        req.user = { id: decoded.id }
+        console.log(`[Auth Middleware] User ${decoded.id} authenticated successfully.`);
+        console.log(`[Auth Middleware] User ${decoded.id} authenticated successfully.`);
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload; // Cast to your JwtPayload interface
-        console.log('[Auth Middleware] Token decoded successfully:', decoded);
-
-        const user = await User.findById(decoded.id);
-
-        if (!user) {
-            console.log(`[Auth Middleware] User not found for ID: ${decoded.id}`);
-            // If user is not found after successful token verification, it's still an auth failure.
-            throw new Error();
-        }
-
-        req.user = user;
-        console.log(`[Auth Middleware] User ${user.username} authenticated successfully.`);
         next();
     }catch(err: any) {
         console.error('[Auth Middleware] Token verification failed or other error:', err); // Log the full error object
@@ -76,3 +84,4 @@ export const auth = async (req: express.Request, res: express.Response, next: ex
         }
     }
 }   
+

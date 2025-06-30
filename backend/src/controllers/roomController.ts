@@ -1,5 +1,9 @@
 import Room from "../models/Room";
-import User from "../models/User";
+import User, { IUser } from "../models/User";
+import { io } from '../server'
+import connectedUsers from '../server'
+import { AuthRequest } from '../middleware/auth'
+import { Response } from 'express';
 
 
 const generateRoomCode = () => {
@@ -105,3 +109,92 @@ export const getRoom = async (req:any, res:any) => {
     });
   }
 };
+
+export const updateMemberStatus = async (req: AuthRequest, res: Response) => {
+  const { roomCode, memberId } = req.params;
+  const { status } = req.body;
+  const ownerId = req.user?.id;
+
+  if(!ownerId) {
+    return res.status(401).json({ message: 'Not authenticated.' })
+  }
+
+  if(!['approved', 'rejected'].includes(status)){
+    return res.status(400).json({ message: 'invalid status provided.' });
+  }
+
+  try{
+    const room  = await Room.findOne({  roomCode: roomCode});
+
+    if (!room) {
+      return res.status(404).json({ message: 'Room not found' });
+    }
+
+    //cehck if requestion user is the room owner
+    if (room.owner.toString() !== ownerId) {
+      return res.status(403).json({ message: 'You are not the owner of this room.' })
+    }
+
+    //find member to update
+    const memberIndex = room.members.findIndex(
+      m => m.user._id.toString() === memberId
+    );
+
+    if(memberIndex === -1) {
+      return res.status(404).json({ message: 'Member not found in this room.' })
+    }
+
+    //member to update
+    const memberToUpdate = room.members[memberIndex];
+    if(memberToUpdate.status === status) {
+      return res.status(200).json({ message: `Member already ${status}.`,room })
+    }
+
+    memberToUpdate.status = status;
+    await room.save();
+
+    //populate the user who was updated for notification
+    const populatedRoom = await Room.findById(room._id)
+      .populate<{ owner: IUser }>('owner','username')
+      .populate<{ members: { user: IUser }[] }>('members.user', 'username')
+
+    if(!populatedRoom) {
+      return res.status(500).json({ message: 'Room not found after member status update' })
+    }
+    // --- Socket.IO: Notify the room owner and the updated member about the status change ---
+    const members = populatedRoom.members as { user: IUser; status: string }[];
+    const foundMember = members.find(m => m.user && (m.user as IUser)._id.toString() === memberId) as { user: IUser } | undefined;
+    const updatedUser = foundMember?.user.username || 'A user';
+
+    // Notify owner's active socket
+    const ownerSocketId = connectedUsers.connectedUsers.get(ownerId); // Get owner's socket ID from map
+      if (ownerSocketId) {
+        io.to(ownerSocketId).emit('memberStatusUpdated', {
+          roomCode: room.roomCode,
+          memberId: memberId,
+          status: status,
+          message: `${updatedUser}'s status updated to ${status}.`
+          });
+      }
+
+    // Also emit directly to the updated user's socket if they are connected
+    const memberSocketId = connectedUsers.connectedUsers.get(memberId); // Get member's socket ID from map
+    if (memberSocketId) {
+        io.to(memberSocketId).emit('yourRoomStatusUpdated', {
+            roomCode: room.roomCode,
+            status: status,
+            message: `Your status in room ${room.roomCode} is now ${status}.`
+        });
+    }
+
+    // Emit to the specific Socket.IO room for general updates (e.g., member list changes)
+    io.to(roomCode).emit('roomUpdated', { room: populatedRoom }); // Let all room members know the room object updated
+
+    console.log(`[UpdateMemberStatus] User ${memberId} status updated to ${status} in room ${room.roomCode}`);
+    res.status(200).json({ message: `Member status updated to ${status}.`, room: populatedRoom });
+  }catch(err: any){
+    console.error('Error updating member status:', err.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+
+}
