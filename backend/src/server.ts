@@ -1,3 +1,23 @@
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('----- Unhandled Rejection (GLOBAL) -----');
+  console.error('Reason:', reason);
+  console.error('Promise:', promise);
+  console.error('---------------------------------------');
+  // Optionally, exit the process after logging, or just log and continue
+  // process.exit(1);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('----- Uncaught Exception (GLOBAL) -----');
+  console.error('Error:', err);
+  console.error('Stack:', err.stack);
+  console.error('-------------------------------------');
+  // This is a synchronous error, usually indicates a bug.
+  // It's often recommended to exit the process after an uncaught exception.
+  process.exit(1);
+});
+
+
 import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
