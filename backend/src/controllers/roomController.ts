@@ -127,76 +127,111 @@ export const getRoom = async (req:AuthRequest, res:express.Response) => {
 // @route   POST /api/rooms/:roomCode/join
 // @desc    Request to join a room (NEWLY ADDED OR CORRECTED)
 // @access  Private
-export const joinRoom = async(req: AuthRequest, res: express.Response) => {
-  const { roomCode } = req.params; //roomCode from URL parameters
-  const userId = req.user?.id; //// Authenticated user's ID
+export const joinRoom = async (req: AuthRequest, res: express.Response) => {
+  const { roomCode } = req.params;
+  const userId = req.user?.id;
+
+  console.log(`[JoinRoom Controller START] Request to join room: ${roomCode} by userId: ${userId}`);
+
   if (!userId) {
-    return res.status(401).json({ message: 'Not authenticated' });
+      console.log('[JoinRoom Controller] Not authenticated: userId is missing.');
+      return res.status(401).json({ message: 'Not authenticated' });
   }
 
-  try{
-    const room = await Room.findOne({ code: roomCode }); //find the room
+  try {
+      console.log(`[JoinRoom Controller] Step 1: Attempting to find room with code: ${roomCode}`);
+      const room = await Room.findOne({ code: roomCode });
 
-    if (!room) {
-      return res.status(404).json({ message: 'Room not found' });
-    }
-
-
-    // Check if user is already a member (approved or pending)
-    const existingMember = room.members.find(m => m.user?._id?.toString() === userId);
-
-
-    if (existingMember) {
-      if (existingMember.status === 'approved') {
-          return res.status(200).json({ message: 'You are already an approved member of this room.', room });
-      } else if (existingMember.status === 'pending') {
-          return res.status(200).json({ message: 'Your join request for this room is already pending approval.', room });
+      if (!room) {
+          console.log(`[JoinRoom Controller] Step 1.1: Room ${roomCode} not found.`);
+          return res.status(404).json({ message: 'Room not found' });
       }
-    }
+      console.log(`[JoinRoom Controller] Step 1.2: Room found: ${room._id}. Owner: ${room.owner.toString()}`);
 
-    // --- FIX START ---
-    // Convert userId string to Mongoose ObjectId before pushing
-    const userObjectId = new mongoose.Types.ObjectId(userId)
+      console.log(`[JoinRoom Controller] Step 2: Checking if user ${userId} is an existing member.`);
+      const existingMember = room.members.find(m => m.user?._id?.toString() === userId);
 
-    // Add user as a pending member
-    room.members.push({ user: userObjectId, status: 'pending' }); // Add new member with 'pending' status
-    await room.save(); //save the room
+      if (existingMember) {
+          if (existingMember.status === 'approved') {
+              console.log(`[JoinRoom Controller] Step 2.1: User ${userId} is already an approved member.`);
+              return res.status(200).json({ message: 'You are already an approved member of this room.', room });
+          } else if (existingMember.status === 'pending') {
+              console.log(`[JoinRoom Controller] Step 2.2: User ${userId}'s request is already pending.`);
+              return res.status(200).json({ message: 'Your join request for this room is already pending approval.', room });
+          }
+      }
 
+      console.log(`[JoinRoom Controller] Step 3: Adding user ${userId} as a pending member.`);
+      try {
+          const userObjectId = new mongoose.Types.ObjectId(userId);
+          room.members.push({ user: userObjectId, status: 'pending' });
+          console.log('[JoinRoom Controller] Step 3.1: User added to members array.');
+      } catch (innerErr: any) {
+          console.error('[JoinRoom Controller] CRITICAL ERROR IN STEP 3 (Adding member):', innerErr.message, innerErr.stack);
+          throw innerErr; // Re-throw to be caught by outer catch
+      }
 
-    // Populate the new member's user data for richer response and notification
-    const populatedRoom = await Room.findById(room._id)
-      .populate<{ owner: IUser }>('owner', 'username')
-      .populate<{ members: { user: IUser; status: 'pending' | 'approved' | 'rejected' }[] }>('members.user', 'username');
+      console.log('[JoinRoom Controller] Step 4: Attempting to save room with new pending member.');
+      try {
+          await room.save();
+          console.log('[JoinRoom Controller] Step 4.1: Room saved successfully.');
+      } catch (innerErr: any) {
+          console.error('[JoinRoom Controller] CRITICAL ERROR IN STEP 4 (Saving room):', innerErr.message, innerErr.stack);
+          throw innerErr; // Re-throw
+      }
 
+      console.log('[JoinRoom Controller] Step 5: Attempting to populate room for response and notifications.');
+      let populatedRoom;
+      try {
+          populatedRoom = await Room.findById(room._id)
+              .populate<{ owner: IUser }>('owner', 'username')
+              .populate<{ members: { user: IUser; status: 'pending' | 'approved' | 'rejected' }[] }>('members.user', 'username');
+          console.log('[JoinRoom Controller] Step 5.1: Room populated successfully.');
+      } catch (innerErr: any) {
+          console.error('[JoinRoom Controller] CRITICAL ERROR IN STEP 5 (Populating room):', innerErr.message, innerErr.stack);
+          throw innerErr; // Re-throw
+      }
 
-    if (!populatedRoom) {
-      return res.status(500).json({ message: 'Room not found after member update' });
-    }
+      if (!populatedRoom) {
+          console.error('[JoinRoom Controller] Step 5.2: Populated room is null after save. This is unexpected.');
+          return res.status(500).json({ message: 'Room not found after member update' });
+      }
 
-    const newPendingMember = populatedRoom.members.find(m => m.user?._id?.toString() === userId);
+      console.log('[JoinRoom Controller] Step 6: Finding new pending member for notification.');
+      const newPendingMember = populatedRoom.members.find(m => m.user?._id?.toString() === userId);
+      console.log('[JoinRoom Controller] Step 6.1: New pending member details:', newPendingMember?.user?.username || 'N/A');
 
-    // --- Socket.IO: Notify the room owner about the new pending request ---
-    const ownerIdStr = populatedRoom.owner?._id?.toString();
-    if (ownerIdStr) {
-      const ownerSocketId = server.connectedUsers.get(ownerIdStr);
+      console.log('[JoinRoom Controller] Step 7: Attempting Socket.IO notification to owner.');
+      const ownerSocketId = server.connectedUsers.get(populatedRoom.owner?._id?.toString() || '');
       if (ownerSocketId) {
-        server.io.to(ownerSocketId).emit('newJoinRequest', {
-            roomCode: room.roomCode,
-            requester: newPendingMember?.user?.username || 'Unknown User',
-            requesterId: userId,
-            message: `${newPendingMember?.user?.username || 'Someone'} wants to join room ${room.roomCode}.`
-        });
-        console.log(`[Socket.IO] Emitted newJoinRequest to owner of room ${room.roomCode}`);
+          server.io.to(ownerSocketId).emit('newJoinRequest', {
+              roomCode: room.roomCode,
+              requester: newPendingMember?.user?.username || 'Unknown User',
+              requesterId: userId,
+              message: `${newPendingMember?.user?.username || 'Someone'} wants to join room ${room.roomCode}.`
+          });
+          console.log(`[JoinRoom Controller] Step 7.1: Socket.IO: newJoinRequest emitted to owner's socket ${ownerSocketId}.`);
+      } else {
+          console.log(`[JoinRoom Controller] Step 7.2: Socket.IO: Owner of room ${room.roomCode} not connected (socketId not found).`);
       }
-    }
 
-      res.status(200).json({ message: 'Join request sent successfully', room: populatedRoom })
-  }catch(err: any) {
-    console.error('Room not joined', err.message);
-    console.error('Error stack:', err.stack);
-    res.status(500).json({ message: 'Server error' });
+      console.log('[JoinRoom Controller] Step 8: Emitting roomUpdated to room.');
+      server.io.to(roomCode).emit('roomUpdated', { room: populatedRoom });
+      console.log('[JoinRoom Controller] Step 8.1: roomUpdated emitted.');
+
+      console.log(`[JoinRoom Controller END] User ${userId} successfully sent join request for room ${roomCode}.`);
+      res.status(200).json({ message: 'Join request sent to room owner.', room: populatedRoom });
+
+  } catch (err: any) {
+      console.error('----- [JoinRoom Controller] CAUGHT EXCEPTION (Outer) -----');
+      console.error(`[JoinRoom Controller] Critical error for room ${roomCode}, user ${userId}:`);
+      console.error('[JoinRoom Controller] Error object (Outer Catch):', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
+      console.error('[JoinRoom Controller] Error message (Outer Catch):', err.message);
+      console.error('[JoinRoom Controller] Error stack (Outer Catch):', err.stack);
+      console.error('-----------------------------------------');
+      res.status(500).json({ message: 'Server error', details: err.message });
   }
-}
+};
 
 
 
