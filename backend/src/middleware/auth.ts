@@ -1,17 +1,15 @@
+import express from 'express';
+//import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import User, { IUser } from "../models/User";
 import { Document } from 'mongoose'; // Needed if User is a Mongoose document
-import express, { Request, Response } from 'express';
-import type { NextFunction } from 'express';
 
 // Define an interface to extend the Request object,
 // so TypeScript knows about the `user` property that our middleware adds.
 // This helps prevent TS errors when accessing `req.user` in controllers.
-export interface AuthRequest extends Request{
-    body: { status: any; };
-    params: { roomCode: any; memberId: any; };
-    get(arg0: string): string | undefined;
-    user? : {
+export interface AuthRequest extends express.Request {
+    [x: string]: any;
+    user?: {
         id: string;
         username?: string;
     }
@@ -33,7 +31,7 @@ declare global {
   }
 }
 
-export const auth = async (req: AuthRequest, res: Response, next: NextFunction) => {
+export const auth = async (req: AuthRequest, res: express.Response, next: express.NextFunction) => {
     const authHeader = req.get('Authorization');
     console.log('Authorization Header:', authHeader);
 

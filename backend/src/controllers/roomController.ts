@@ -1,23 +1,31 @@
+// This file contains API controller functions related to Room management
+//(creating,getting,updating,joining room) 
+//acts as bridge between frontend requests & backend data
+//It interacts with database and usese server.io
+
+import express from 'express';
+//import { Request, Response } from "express";
+import { HydratedDocument } from "mongoose";
 import Room from "../models/Room";
+import { IRoom } from "../models/Room";
+import { IRoomMember } from "../models/Room";
 import User, { IUser } from "../models/User";
-import { io } from '../server'
-import connectedUsers from '../server'
+import server from '../server'
 import { AuthRequest } from '../middleware/auth'
-import { Response } from 'express';
 
 
+//simple utility function
+//create small 6 digit roomCode & unique
 const generateRoomCode = () => {
     return Math.random().toString(36).substring(2,8).toUpperCase();
 };
 
-
-
-// controllers/roomController.js
+//this controler expects an authenticated user (req.user.id) to be making te request
 export const createRoom = async (req:any, res:any) => {
   try {
     console.log('[CreateRoom]Starting room creation for user:', req.user ? req.user.id : 'User ID not available');
     console.log('[CreateRoom] Request body:', req.body);
-    //user verification
+    //user verification , find user by id
     const user = await User.findById(req.user.id);
     console.log('[CreateRoom] User fetched:', user ? user.username : 'User not found');
     if (!user) {
@@ -32,10 +40,12 @@ export const createRoom = async (req:any, res:any) => {
     const maxAttempts = 10;
 
     // Generate unique room code
+    //enters a loop (up to maxAttempts) to generate a roomCode using generateCode()
     while (!isUnique && attempts < maxAttempts) {
       uniqueRoomCode = generateRoomCode();
       console.log(`[CreateRoom]Generated room code: ${uniqueRoomCode}, attempt ${attempts + 1}`);
       
+      //checks for each generated room code to ensure its not already presnt in Room
       const existingRoom = await Room.findOne({ roomCode: uniqueRoomCode });
       if (!existingRoom) {
         isUnique = true;
@@ -49,6 +59,7 @@ export const createRoom = async (req:any, res:any) => {
     }
 
     // Create new room
+    //once unique code is found, it creates a new Room instance 
     const newRoom = new Room({
       roomCode: uniqueRoomCode,
       owner: req.user.id, 
@@ -62,7 +73,7 @@ export const createRoom = async (req:any, res:any) => {
       return res.status(400).json({ error: "Validation failed", details: validationError.errors });
     }
 
-
+    // save the room to databse
     const savedRoom = await newRoom.save();
     console.log('[CreateRoom] Room created successfully:', savedRoom);
     
@@ -82,10 +93,10 @@ export const createRoom = async (req:any, res:any) => {
   }
 };
 
-
-// controllers/roomController.js
-export const getRoom = async (req:any, res:any) => {
+//this controller expects roomCode to be a part of URL parameters, also expects authenticated user (AuthRequest)
+export const getRoom = async (req:AuthRequest, res:express.Response) => {
   try {
+    //search for a room that matches the code form URL
     const room = await Room.findOne({ roomCode: req.params.roomCode })
                            .populate('owner');
     
@@ -110,20 +121,23 @@ export const getRoom = async (req:any, res:any) => {
   }
 };
 
-export const updateMemberStatus = async (req: AuthRequest, res: Response) => {
-  const { roomCode, memberId } = req.params;
-  const { status } = req.body;
-  const ownerId = req.user?.id;
+//
+export const updateMemberStatus = async (req: AuthRequest, res: express.Response) => {
+  const { roomCode, memberId } = req.params; //get roomCode & memberId from URL
+  const { status: memberStatus } = req.body; // get new status from request body
+  const ownerId = req.user?.id; //get ID of authenticated user
 
   if(!ownerId) {
     return res.status(401).json({ message: 'Not authenticated.' })
   }
 
-  if(!['approved', 'rejected'].includes(status)){
+  //if new status is neither of the three options
+  if(!['approved', 'rejected'].includes(memberStatus)){
     return res.status(400).json({ message: 'invalid status provided.' });
   }
 
   try{
+    //find the room
     const room  = await Room.findOne({  roomCode: roomCode});
 
     if (!room) {
@@ -135,9 +149,10 @@ export const updateMemberStatus = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ message: 'You are not the owner of this room.' })
     }
 
-    //find member to update
+    //find member to update within the room's membrs array
+    //iterates through members array to find the specific member to update using findIndex
     const memberIndex = room.members.findIndex(
-      m => m.user._id.toString() === memberId
+      m => m.user?._id?.toString() === memberId //compare member's user ID iwth memberId
     );
 
     if(memberIndex === -1) {
@@ -146,55 +161,124 @@ export const updateMemberStatus = async (req: AuthRequest, res: Response) => {
 
     //member to update
     const memberToUpdate = room.members[memberIndex];
-    if(memberToUpdate.status === status) {
-      return res.status(200).json({ message: `Member already ${status}.`,room })
+    if(memberToUpdate.status === memberStatus) {
+      return res.status(200).json({ message: `Member already ${memberStatus}.`,room })
     }
 
-    memberToUpdate.status = status;
-    await room.save();
+    memberToUpdate.status = memberStatus; //update the status
+    await room.save(); //save the room to update the embedded member status
 
-    //populate the user who was updated for notification
+    //populate for notifications
     const populatedRoom = await Room.findById(room._id)
-      .populate<{ owner: IUser }>('owner','username')
-      .populate<{ members: { user: IUser }[] }>('members.user', 'username')
+      .populate<{ owner: IUser }>('owner','username') // Populate owner for username
+      .populate<{ members: { user: IUser }[] }>('members.user', 'username') //Populate members' user fileds for username
 
     if(!populatedRoom) {
       return res.status(500).json({ message: 'Room not found after member status update' })
     }
     // --- Socket.IO: Notify the room owner and the updated member about the status change ---
+    //Find username of the updated user
     const members = populatedRoom.members as { user: IUser; status: string }[];
-    const foundMember = members.find(m => m.user && (m.user as IUser)._id.toString() === memberId) as { user: IUser } | undefined;
-    const updatedUser = foundMember?.user.username || 'A user';
+    const updatedUser = populatedRoom.members.find(m => m.user?._id?.toString() === memberId)?.user?.username || 'A user';
 
-    // Notify owner's active socket
-    const ownerSocketId = connectedUsers.connectedUsers.get(ownerId); // Get owner's socket ID from map
-      if (ownerSocketId) {
-        io.to(ownerSocketId).emit('memberStatusUpdated', {
-          roomCode: room.roomCode,
-          memberId: memberId,
-          status: status,
-          message: `${updatedUser}'s status updated to ${status}.`
-          });
-      }
+    // Notify owner's active socket (if connected)
+    const ownerSocketId = server.connectedUsers.get(ownerId); // Get owner's socket ID from map
+    if (ownerSocketId) {
+      server.io.to(ownerSocketId).emit('memberStatusUpdated', {
+        roomCode: room.roomCode,
+        memberId: memberId,
+        status: memberStatus,
+        message: `${updatedUser}'s status updated to ${memberStatus}.`
+      });
+    }
 
     // Also emit directly to the updated user's socket if they are connected
-    const memberSocketId = connectedUsers.connectedUsers.get(memberId); // Get member's socket ID from map
+    // Notify the updated user's active socket (if connected)
+    const memberSocketId = server.connectedUsers.get(memberId); // Get member's socket ID from map
     if (memberSocketId) {
-        io.to(memberSocketId).emit('yourRoomStatusUpdated', {
+        server.io.to(memberSocketId).emit('yourRoomStatusUpdated', {
             roomCode: room.roomCode,
-            status: status,
-            message: `Your status in room ${room.roomCode} is now ${status}.`
+            status: memberStatus,
+            message: `Your status in room ${room.roomCode} is now ${memberStatus}.`
         });
     }
 
-    // Emit to the specific Socket.IO room for general updates (e.g., member list changes)
-    io.to(roomCode).emit('roomUpdated', { room: populatedRoom }); // Let all room members know the room object updated
-
-    console.log(`[UpdateMemberStatus] User ${memberId} status updated to ${status} in room ${room.roomCode}`);
-    res.status(200).json({ message: `Member status updated to ${status}.`, room: populatedRoom });
+    // Emit to the specific Socket.IO room (all conncetd users) for general updates (e.g., member list changes)
+    server.io.to(roomCode).emit('roomUpdated', { room: populatedRoom }); // Let all room members know the room object updated
+    console.log(`[UpdateMemberStatus] User ${memberId} status updated to ${memberStatus} in room ${room.roomCode}`);
+    res.status(200).json({ message: `Member status updated to ${memberStatus}.`, room: populatedRoom });
   }catch(err: any){
     console.error('Error updating member status:', err.message);
     res.status(500).json({ message: 'Server error' });
   }
 
+}
+
+// @route   POST /api/rooms/:roomCode/join
+// @desc    Request to join a room (NEWLY ADDED OR CORRECTED)
+// @access  Private
+export const joinRoom = async(req: AuthRequest, res: express.Response) => {
+  const { roomCode } = req.params; //roomCode from URL parameters
+  const userId = req.user?.id; //// Authenticated user's ID
+  if (!userId) {
+    return res.status(401).json({ message: 'Not authenticated' });
+  }
+
+  try{
+    const room = await Room.findOne({ code: roomCode }); //find the room
+
+    if (!room) {
+      return res.status(404).json({ message: 'Room not found' });
+    }
+
+
+    // Check if user is already a member (approved or pending)
+    const existingMember = room.members.find(m => m.user?._id?.toString() === userId);
+
+
+    if (existingMember) {
+      if (existingMember.status === 'approved') {
+          return res.status(200).json({ message: 'You are already an approved member of this room.', room });
+      } else if (existingMember.status === 'pending') {
+          return res.status(200).json({ message: 'Your join request for this room is already pending approval.', room });
+      }
+    }
+
+    // Add user as a pending member
+    room.members.push({ user: userId, status: 'pending' }); // Add new member with 'pending' status
+    await room.save(); //save the room
+
+
+    // Populate the new member's user data for richer response and notification
+    const populatedRoom = await Room.findById(room._id)
+      .populate<{ owner: IUser }>('owner', 'username')
+      .populate<{ members: { user: IUser; status: 'pending' | 'approved' | 'rejected' }[] }>('members.user', 'username');
+
+
+    if (!populatedRoom) {
+      return res.status(500).json({ message: 'Room not found after member update' });
+    }
+
+    const newPendingMember = populatedRoom.members.find(m => m.user?._id?.toString() === userId);
+
+    // --- Socket.IO: Notify the room owner about the new pending request ---
+    const ownerIdStr = populatedRoom.owner?._id?.toString();
+    if (ownerIdStr) {
+      const ownerSocketId = server.connectedUsers.get(ownerIdStr);
+      if (ownerSocketId) {
+        server.io.to(ownerSocketId).emit('newJoinRequest', {
+            roomCode: room.roomCode,
+            requester: newPendingMember?.user?.username || 'Unknown User',
+            requesterId: userId,
+            message: `${newPendingMember?.user?.username || 'Someone'} wants to join room ${room.roomCode}.`
+        });
+        console.log(`[Socket.IO] Emitted newJoinRequest to owner of room ${room.roomCode}`);
+      }
+    }
+
+      res.status(200).json({ message: 'Join request sent successfully', room: populatedRoom })
+  }catch(err: any) {
+    console.error('Room not joined', err.message);
+    res.status(500).json({ message: 'Server error' });
+  }
 }

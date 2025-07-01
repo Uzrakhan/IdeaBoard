@@ -2,11 +2,12 @@ import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
+import { Socket } from 'socket.io/dist/socket';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import { Low } from 'lowdb';
 import { JSONFile } from 'lowdb/node';
-import type { Socket } from 'socket.io/dist/socket';
+//import type { Socket } from 'socket.io/dist/socket';
 import authRoutes from './routes/auth';
 import roomRoutes from './routes/rooms';
 
