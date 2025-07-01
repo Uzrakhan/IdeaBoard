@@ -35,6 +35,7 @@ type DrawingLine = {
 };
 
 const Whiteboard: React.FC<WhiteboardProps> = ({ room, setCurrentRoom }) => {
+  
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -56,6 +57,8 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ room, setCurrentRoom }) => {
   //determine if current user is owner
   const isOwner = currentUser && room.owner._id === currentUser._id;
 
+  console.log('Current User from AuthContext:', currentUser);
+  
   // Keep refs updated with current state
   useEffect(() => {
     colorRef.current = color;

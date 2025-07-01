@@ -2,7 +2,6 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 
 export interface User {
   _id: string;
-  userId: string;
   username: string;
 }
 
@@ -11,7 +10,7 @@ export interface AuthContextType {
   user: User | null;
   login: (token: string, userId: string, username: string) => void;
   logout: () => void;
-  currentUser: User
+  currentUser: User | null;
 }
 
 // Define the props for AuthProvider
@@ -32,18 +31,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const userId = localStorage.getItem('userId');
     const username = localStorage.getItem('username') || '';
 
-    if (token && userId) {
+    if (token && userId && username) { // All three must be present for a valid session
       setIsAuthenticated(true);
-      setUser({ _id: userId, userId, username });
+      setUser({ _id: userId, username });
+    }else{
+      localStorage.removeItem('token');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('username');
+      setIsAuthenticated(false);
+      setUser(null)
     }
-  }, []);
+  }, []); // Run only once on mount
 
   const login = (token: string, userId: string, username: string) => {
     localStorage.setItem('token', token);
     localStorage.setItem('userId', userId);
     localStorage.setItem('username', username);
     setIsAuthenticated(true);
-    setUser({ _id: userId, userId, username });
+    setUser({ _id: userId, username });
   };
 
   const logout = () => {
@@ -59,7 +64,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user,
     login,
     logout,
-    currentUser: user as User // or you can use user ?? { userId: '', username: '' } for a fallback
+    currentUser: user // or you can use user ?? { userId: '', username: '' } for a fallback
   };
 
   return (
