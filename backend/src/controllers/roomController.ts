@@ -4,6 +4,7 @@
 //It interacts with database and usese server.io
 
 import express from 'express';
+import mongoose from 'mongoose';
 //import { Request, Response } from "express";
 import { HydratedDocument } from "mongoose";
 import Room from "../models/Room";
@@ -121,6 +122,84 @@ export const getRoom = async (req:AuthRequest, res:express.Response) => {
   }
 };
 
+
+
+// @route   POST /api/rooms/:roomCode/join
+// @desc    Request to join a room (NEWLY ADDED OR CORRECTED)
+// @access  Private
+export const joinRoom = async(req: AuthRequest, res: express.Response) => {
+  const { roomCode } = req.params; //roomCode from URL parameters
+  const userId = req.user?.id; //// Authenticated user's ID
+  if (!userId) {
+    return res.status(401).json({ message: 'Not authenticated' });
+  }
+
+  try{
+    const room = await Room.findOne({ code: roomCode }); //find the room
+
+    if (!room) {
+      return res.status(404).json({ message: 'Room not found' });
+    }
+
+
+    // Check if user is already a member (approved or pending)
+    const existingMember = room.members.find(m => m.user?._id?.toString() === userId);
+
+
+    if (existingMember) {
+      if (existingMember.status === 'approved') {
+          return res.status(200).json({ message: 'You are already an approved member of this room.', room });
+      } else if (existingMember.status === 'pending') {
+          return res.status(200).json({ message: 'Your join request for this room is already pending approval.', room });
+      }
+    }
+
+    // --- FIX START ---
+    // Convert userId string to Mongoose ObjectId before pushing
+    const userObjectId = new mongoose.Types.ObjectId(userId)
+
+    // Add user as a pending member
+    room.members.push({ user: userObjectId, status: 'pending' }); // Add new member with 'pending' status
+    await room.save(); //save the room
+
+
+    // Populate the new member's user data for richer response and notification
+    const populatedRoom = await Room.findById(room._id)
+      .populate<{ owner: IUser }>('owner', 'username')
+      .populate<{ members: { user: IUser; status: 'pending' | 'approved' | 'rejected' }[] }>('members.user', 'username');
+
+
+    if (!populatedRoom) {
+      return res.status(500).json({ message: 'Room not found after member update' });
+    }
+
+    const newPendingMember = populatedRoom.members.find(m => m.user?._id?.toString() === userId);
+
+    // --- Socket.IO: Notify the room owner about the new pending request ---
+    const ownerIdStr = populatedRoom.owner?._id?.toString();
+    if (ownerIdStr) {
+      const ownerSocketId = server.connectedUsers.get(ownerIdStr);
+      if (ownerSocketId) {
+        server.io.to(ownerSocketId).emit('newJoinRequest', {
+            roomCode: room.roomCode,
+            requester: newPendingMember?.user?.username || 'Unknown User',
+            requesterId: userId,
+            message: `${newPendingMember?.user?.username || 'Someone'} wants to join room ${room.roomCode}.`
+        });
+        console.log(`[Socket.IO] Emitted newJoinRequest to owner of room ${room.roomCode}`);
+      }
+    }
+
+      res.status(200).json({ message: 'Join request sent successfully', room: populatedRoom })
+  }catch(err: any) {
+    console.error('Room not joined', err.message);
+    console.error('Error stack:', err.stack);
+    res.status(500).json({ message: 'Server error' });
+  }
+}
+
+
+
 //
 export const updateMemberStatus = async (req: AuthRequest, res: express.Response) => {
   const { roomCode, memberId } = req.params; //get roomCode & memberId from URL
@@ -214,71 +293,3 @@ export const updateMemberStatus = async (req: AuthRequest, res: express.Response
 
 }
 
-// @route   POST /api/rooms/:roomCode/join
-// @desc    Request to join a room (NEWLY ADDED OR CORRECTED)
-// @access  Private
-export const joinRoom = async(req: AuthRequest, res: express.Response) => {
-  const { roomCode } = req.params; //roomCode from URL parameters
-  const userId = req.user?.id; //// Authenticated user's ID
-  if (!userId) {
-    return res.status(401).json({ message: 'Not authenticated' });
-  }
-
-  try{
-    const room = await Room.findOne({ code: roomCode }); //find the room
-
-    if (!room) {
-      return res.status(404).json({ message: 'Room not found' });
-    }
-
-
-    // Check if user is already a member (approved or pending)
-    const existingMember = room.members.find(m => m.user?._id?.toString() === userId);
-
-
-    if (existingMember) {
-      if (existingMember.status === 'approved') {
-          return res.status(200).json({ message: 'You are already an approved member of this room.', room });
-      } else if (existingMember.status === 'pending') {
-          return res.status(200).json({ message: 'Your join request for this room is already pending approval.', room });
-      }
-    }
-
-    // Add user as a pending member
-    room.members.push({ user: userId, status: 'pending' }); // Add new member with 'pending' status
-    await room.save(); //save the room
-
-
-    // Populate the new member's user data for richer response and notification
-    const populatedRoom = await Room.findById(room._id)
-      .populate<{ owner: IUser }>('owner', 'username')
-      .populate<{ members: { user: IUser; status: 'pending' | 'approved' | 'rejected' }[] }>('members.user', 'username');
-
-
-    if (!populatedRoom) {
-      return res.status(500).json({ message: 'Room not found after member update' });
-    }
-
-    const newPendingMember = populatedRoom.members.find(m => m.user?._id?.toString() === userId);
-
-    // --- Socket.IO: Notify the room owner about the new pending request ---
-    const ownerIdStr = populatedRoom.owner?._id?.toString();
-    if (ownerIdStr) {
-      const ownerSocketId = server.connectedUsers.get(ownerIdStr);
-      if (ownerSocketId) {
-        server.io.to(ownerSocketId).emit('newJoinRequest', {
-            roomCode: room.roomCode,
-            requester: newPendingMember?.user?.username || 'Unknown User',
-            requesterId: userId,
-            message: `${newPendingMember?.user?.username || 'Someone'} wants to join room ${room.roomCode}.`
-        });
-        console.log(`[Socket.IO] Emitted newJoinRequest to owner of room ${room.roomCode}`);
-      }
-    }
-
-      res.status(200).json({ message: 'Join request sent successfully', room: populatedRoom })
-  }catch(err: any) {
-    console.error('Room not joined', err.message);
-    res.status(500).json({ message: 'Server error' });
-  }
-}
