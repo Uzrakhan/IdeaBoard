@@ -148,6 +148,10 @@ export const joinRoom = async (req: AuthRequest, res: express.Response) => {
       }
       console.log(`[JoinRoom Controller] Step 1.2: Room found: ${room._id}. Owner: ${room.owner.toString()}`);
 
+      // --all other logic ocmmented out for isolation
+      console.log(`[JoinRoom Controller END - MINIMAL] Returning success for room ${roomCode}.`);
+      
+      /*
       console.log(`[JoinRoom Controller] Step 2: Checking if user ${userId} is an existing member.`);
       const existingMember = room.members.find(m => m.user?._id?.toString() === userId);
 
@@ -220,16 +224,16 @@ export const joinRoom = async (req: AuthRequest, res: express.Response) => {
       console.log('[JoinRoom Controller] Step 8.1: roomUpdated emitted.');
 
       console.log(`[JoinRoom Controller END] User ${userId} successfully sent join request for room ${roomCode}.`);
-      res.status(200).json({ message: 'Join request sent to room owner.', room: populatedRoom });
-
+      */
+      res.status(200).json({ message: 'Minimal join request processed (no actual join logic executed).', room: room });
   } catch (err: any) {
-      console.error('----- [JoinRoom Controller] CAUGHT EXCEPTION (Outer) -----');
-      console.error(`[JoinRoom Controller] Critical error for room ${roomCode}, user ${userId}:`);
-      console.error('[JoinRoom Controller] Error object (Outer Catch):', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
-      console.error('[JoinRoom Controller] Error message (Outer Catch):', err.message);
-      console.error('[JoinRoom Controller] Error stack (Outer Catch):', err.stack);
-      console.error('-----------------------------------------');
-      res.status(500).json({ message: 'Server error', details: err.message });
+    console.error('----- [JoinRoom Controller] CAUGHT EXCEPTION (Outer - MINIMAL) -----');
+    console.error(`[JoinRoom Controller] Critical error for room ${roomCode}, user ${userId}:`);
+    console.error('[JoinRoom Controller] Error object (Outer Catch):', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
+    console.error('[JoinRoom Controller] Error message (Outer Catch):', err.message);
+    console.error('[JoinRoom Controller] Error stack (Outer Catch):', err.stack);
+    console.error('-----------------------------------------');
+    res.status(500).json({ message: 'Server error (minimal joinRoom)', details: err.message });
   }
 };
 
