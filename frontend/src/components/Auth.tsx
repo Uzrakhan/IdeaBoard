@@ -1,229 +1,118 @@
 import React, { useState } from 'react';
-import { login, signup } from '../api';
 import { useNavigate } from 'react-router-dom';
-import { useContext } from 'react';
-import { AuthContext } from '../context/AuthContext';
+import { login, signup } from '../api'; // Ensure login and signup are imported
+import { useAuth } from '../context/AuthContext'; // Import useAuth hook
 
-
-
-// Removed the AuthProps interface since we're not using onAuthSuccess anymore
 const Auth: React.FC = () => {
     const [isLogin, setIsLogin] = useState(true);
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const [globalError, setGlobalError] = useState(''); // For general authentication errors
-    const [usernameError, setUsernameError] = useState(''); // For username specific errors
-    const [passwordError, setPasswordError] = useState(''); // For password specific errors
-    const [isLoading, setIsLoading] = useState(false);
+    const [message, setMessage] = useState(''); // For displaying success/error messages to the user
     const navigate = useNavigate();
-    const { login: authLogin } = useAuth(); // Get login function from AuthContext
-
-    //Validation logic
-    const validateUsername = (username: string): string => {
-        if(!username.trim()) {
-            return 'Username is required.'
-        }
-        if(username.length < 3) {
-            return 'Username must be at least 3 characters.'
-        }
-
-        if (username.length > 20) {
-            return 'Username cannot exceed 20 characters.';
-        }
-
-        //more specific username validation if
-        if(!/^[a-zA-Z0-9_]+$/.test(username)) {
-            return 'Username can only contain letters, numbers, and underscores.';
-        }
-
-        return '';
-    }
-
-    const validatePassword = (password: string): string => {
-        if(!password) {
-            return 'Password is required.'
-        }
-
-        if (password.length < 6) {
-            return 'Password must be at least 6 characters long.';
-        }
-
-        if (password.length > 50) {
-            return 'Password cannot exceed 50 characters.';
-        }
-
-        const hasUppercase = /[A-Z]/.test(password);
-        const hasLowercase = /[a-z]/.test(password);
-        const hasNumber = /[0-9]/.test(password);
-        const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
-        if (!hasUppercase || !hasLowercase || !hasNumber || !hasSpecialChar) {
-           return 'Password must include uppercase, lowercase, number, and special character.';
-        }
-
-        return '';
-    }
-
-    const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value;
-        setUsername(value);
-        setUsernameError(validateUsername(value))
-    }
-
-    const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value;
-        setPassword(value);
-        setPasswordError(validatePassword(value)); // Validate on change
-    };
+    const { login: authLogin } = useAuth(); // Rename imported login to avoid conflict
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setGlobalError('')
+        setMessage(''); // Clear previous messages
 
-        const usernameErrMsg = validateUsername(username);
-        const passwordErrMsg = validatePassword(password);
-
-        setUsernameError(usernameErrMsg);
-        setPasswordError(passwordErrMsg);
-
-        if (usernameErrMsg || passwordErrMsg) {
+        // Basic Frontend Validation
+        if (!username.trim() || !password.trim()) {
+            setMessage('Username and password cannot be empty.');
+            console.warn('[Auth Component] Frontend validation: Username or password is empty.');
             return;
         }
 
-
-        setIsLoading(true);
+        // Debugging: Log the data being sent
+        console.log(`[Auth Component] Attempting ${isLogin ? 'Login' : 'Signup'} for username: "${username}"`);
+        console.log(`[Auth Component] Password length: ${password.length} (not logging actual password for security)`);
 
         try {
-            const response = isLogin 
-                ? await login(username, password) 
-                : await signup(username, password); 
+            let response;
+            if (isLogin) {
+                response = await login(username, password);
+                setMessage('Login successful!');
+                console.log('[Auth Component] Login API response:', response.data);
+            } else {
+                response = await signup(username, password);
+                setMessage('Signup successful! Please log in.');
+                console.log('[Auth Component] Signup API response:', response.data);
+            }
 
-            // Use context login function instead of directly setting localStorage
-            authLogin(response.data.token, response.data.userId, username);
-            
-            navigate('/'); // Redirect to home after successful auth
-        } catch(err:any) {
-            setGlobalError(err.response?.data?.message || 'Authentication failed')
-        } finally {
-            setIsLoading(false);
+            // If login was successful, update AuthContext and navigate
+            if (isLogin && response.data.token && response.data.userId && response.data.username) {
+                authLogin(response.data.token, response.data.userId, response.data.username);
+                navigate('/'); // Navigate to home/dashboard after successful login
+            } else if (!isLogin) {
+                // For signup, switch to login form automatically
+                setIsLogin(true);
+            }
+
+        } catch (error: any) {
+            console.error(`[Auth Component] ${isLogin ? 'Login' : 'Signup'} error:`, error);
+            const errorMessage = error.response?.data?.message || error.response?.data?.error || 'An unexpected error occurred.';
+            setMessage(errorMessage);
         }
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
-            <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-md">
-                <div className="text-center">
-                    <div className="mx-auto bg-indigo-600 w-16 h-16 rounded-full flex items-center justify-center mb-4">
-                        <span className="text-white text-2xl font-bold">I</span>
-                    </div>
-                    <h2 className="text-3xl font-bold text-gray-900">
-                        {isLogin ? 'Sign in to your account' : 'Create a new account'}
-                    </h2>
-                    <p className="mt-2 text-gray-600">
-                        {isLogin 
-                            ? 'Enter your credentials to access your boards' 
-                            : 'Set up your account to start collaborating'}
-                    </p>
-                </div>
-
-                {globalError && (
-                    <div className="bg-red-50 text-red-700 p-3 rounded-md">
-                        {globalError}
+        <div className="min-h-screen flex items-center justify-center bg-gray-100 font-inter">
+            <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+                <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
+                    {isLogin ? 'Login' : 'Sign Up'}
+                </h2>
+                {message && (
+                    <div className={`p-3 mb-4 rounded-md text-sm text-center ${message.includes('successful') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                        {message}
                     </div>
                 )}
-
-                <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-                    <div className="space-y-4">
-                        <div>
-                            <label htmlFor="username" className="block text-sm font-medium text-gray-700">
-                                Username
-                            </label>
-                            <input
-                                id="username"
-                                name="username"
-                                type="text"
-                                className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none ${usernameError ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-indigo-500 focus:border-indigo-500'}`}
-                                value={username}
-                                onChange={handleUsernameChange}
-                                onBlur={() => setUsernameError(validateUsername(username))} // Validate on blur as well
-                            />
-                            {usernameError && (
-                                <p className="mt-2 text-sm text-red-600">{usernameError}</p>
-                            )}
-                        </div>
-
-                        <div>
-                            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                                Password
-                            </label>
-                            <input
-                                id="password"
-                                name="password"
-                                type="password"
-                                className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none ${passwordError ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-indigo-500 focus:border-indigo-500'}`}
-                                value={password}
-                                onChange={handlePasswordChange}
-                                onBlur={() => setPasswordError(validatePassword(password))} // Validate on blur as well
-                            />
-                            {passwordError && (
-                                <p className="mt-2 text-sm text-red-600">{passwordError}</p>
-                            )}
-                        </div>
+                <form onSubmit={handleSubmit}>
+                    <div className="mb-4">
+                        <label htmlFor="username" className="block text-gray-700 text-sm font-bold mb-2">
+                            Username
+                        </label>
+                        <input
+                            type="text"
+                            id="username"
+                            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            required
+                        />
                     </div>
-
-                    <div>
+                    <div className="mb-6">
+                        <label htmlFor="password" className="block text-gray-700 text-sm font-bold mb-2">
+                            Password
+                        </label>
+                        <input
+                            type="password"
+                            id="password"
+                            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                        />
+                    </div>
+                    <div className="flex items-center justify-between">
                         <button
                             type="submit"
-                            disabled={isLoading || !!usernameError || !!passwordError}
-                            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full transition-colors duration-200"
                         >
-                            {isLoading ? (
-                                <span className="flex items-center">
-                                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                    Processing...
-                                </span>
-                            ) : isLogin ? (
-                                'Sign In'
-                            ) : (
-                                'Create Account'
-                            )}
+                            {isLogin ? 'Login' : 'Sign Up'}
                         </button>
                     </div>
                 </form>
-
                 <div className="mt-6 text-center">
                     <button
-                        onClick={() => {
-                            setIsLogin(!isLogin)
-                            setUsername('');
-                            setPassword('')
-                            setUsernameError('')
-                            setPasswordError('')
-                            setGlobalError('')
-                        }
-                        }
-                        className="text-indigo-600 hover:text-indigo-800 font-medium"
+                        onClick={() => setIsLogin(!isLogin)}
+                        className="text-indigo-600 hover:text-indigo-800 text-sm"
                     >
-                        {isLogin 
-                            ? 'Need an account? Sign Up' 
-                            : 'Already have an account? Sign In'}
+                        {isLogin ? 'Need an account? Sign Up' : 'Already have an account? Login'}
                     </button>
                 </div>
             </div>
         </div>
-    )
-}
-
-// REMOVED THE LOCAL useAuth FUNCTION - USING CONTEXT VERSION INSTEAD
+    );
+};
 
 export default Auth;
-
-function useAuth(): { login: (token: string, userId: string, username: string) => void } {
-    const context = useContext(AuthContext);
-    if (!context) {
-        throw new Error('useAuth must be used within an AuthProvider');
-    }
-    return { login: context.login };
-}
+    
