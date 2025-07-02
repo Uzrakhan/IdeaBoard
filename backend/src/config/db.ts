@@ -16,7 +16,7 @@ const connectDB = async () => {
         const conn = await mongoose.connect(mongoURI, {
             // useNewUrlParser: true, // Deprecated in Mongoose 6+
             // useUnifiedTopology: true, // Deprecated in Mongoose 6+
-            serverSelectionTimeoutMS: 15000, // Increase timeout to 15 seconds
+            serverSelectionTimeoutMS: 20000, // Increase timeout to 15 seconds
             socketTimeoutMS: 45000, // Increase socket timeout to 45 seconds
         });
 
