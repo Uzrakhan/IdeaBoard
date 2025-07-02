@@ -1,85 +1,56 @@
-import express from 'express';
+import express from 'express'
 //import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-import User, { IUser } from "../models/User";
-import { Document } from 'mongoose'; // Needed if User is a Mongoose document
+import jwt, { JwtPayload } from 'jsonwebtoken';
+import User, { IUser } from '../models/User';
 
-// Define an interface to extend the Request object,
-// so TypeScript knows about the `user` property that our middleware adds.
-// This helps prevent TS errors when accessing `req.user` in controllers.
+// Extend Express Request to include authenticated user
 export interface AuthRequest extends express.Request {
-    [x: string]: any;
-    user?: {
-        id: string;
-        username?: string;
-    }
+  params: { roomCode: any; };
+  body: {
+      memberId: any; status: any; 
+};
+  headers: any;
+  user?: IUser;
 }
 
-// Define a more specific type for the user payload coming from the JWT
-interface JwtPayload {
-    id: string
-}
+// Middleware to protect routes
+export const protect = async (req: AuthRequest, res: express.Response, next: express.NextFunction) => {
+  let token: string | undefined;
+  const authHeader = req.headers.authorization;
 
-// Extend the Express Request type to include the 'user' property
-// This is the standard way to augment Express's types.
-// The 'Request' type from 'express' already includes 'headers'.
-declare global {
-  namespace Express {
-    interface Request {
-      user?: IUser; // Use your actual User type here, not 'any'
-    }
-  }
-}
+  if (authHeader && authHeader.startsWith('Bearer')) {
+    token = authHeader.split(' ')[1];
+    console.log('[Auth Middleware] Verifying token:', token);
 
-export const auth = async (req: AuthRequest, res: express.Response, next: express.NextFunction) => {
-    const authHeader = req.get('Authorization');
-    console.log('Authorization Header:', authHeader);
+    try {
+      const decoded = jwt.verify(token as string, process.env.JWT_SECRET || 'your_jwt_secret');
 
-    if (!authHeader) {
-        console.warn('[Auth Middleware] Authorization header required');
-        return res.status(401).json({ message: 'Authorization header required' });
-    }
+      // Type narrowing (safe check that decoded is an object and has `id`)
+      if (typeof decoded === 'object' && decoded !== null && 'id' in decoded) {
+        const userId = (decoded as { id: string }).id;
 
-    // Expected format: "Bearer TOKEN_STRING"
-    const tokenParts = authHeader.split(' ');
-    if(tokenParts.length !== 2 || tokenParts[0] !== 'Bearer') {
-        console.warn('[Auth Middleware] Invalid token format. Expected "Bearer <token>".');
-        return res.status(401).json({ message: 'Invalid token format.' });
-    }
-    const token = tokenParts[1];
+        const user = await User.findById(userId).select('-password');
 
-    try{
-        // IMPORTANT: Ensure process.env.JWT_SECRET is actually defined in your Render environment variables.
-        // If it's undefined, jwt.verify will throw an error.
-        const jwtSecret = process.env.JWT_SECRET;
-
-        if(!jwtSecret) {
-            console.error('JWT_SECRET is not defined in environment variables.');
-            return res.status(500).json({ message: 'Server configuration error: JWT_SECRET missing.' });
+        if (!user) {
+          return res.status(401).json({ message: 'Not authorized, user not found' });
         }
 
-        console.log('[Auth Middleware] Attempting to verify token:', token); // Log the token being verified
-
-        const decoded = jwt.verify(token, jwtSecret) as JwtPayload; // Cast to your JwtPayload interface
-        //attach user to request object
-        req.user = { id: decoded.id }
-        console.log(`[Auth Middleware] User ${decoded.id} authenticated successfully.`);
-        console.log(`[Auth Middleware] User ${decoded.id} authenticated successfully.`);
-
+        req.user = user;
+        console.log('[Auth Middleware] Authenticated user:', (user._id as string).toString());
         next();
-    }catch(err: any) {
-        console.error('[Auth Middleware] Token verification failed or other error:', err); // Log the full error object
-
-        if (err.name === "TokenExpiredError") {
-            console.log('[Auth Middleware] Token expired.');
-            return res.status(401).json({ message: 'Token expired. Please log in again.' });
-        }else if (err.name === 'JsonWebTokenError') {
-            console.log('[Auth Middleware] Invalid JWT signature or malformed token.');
-            return res.status(401).json({ message: 'Invalid token. Please log in again.' });
-        }else {
-            console.log('[Auth Middleware] Unexpected authentication error.');
-            return res.status(401).json({ message: 'Authentication failed due to an unexpected error.' });
-        }
+      } else {
+        return res.status(401).json({ message: 'Invalid token payload' });
+      }
+    } catch (error: any) {
+      console.error('[Auth Middleware] Token verification failed:', error.message);
+      return res.status(401).json({
+        message:
+          error.name === 'TokenExpiredError'
+            ? 'Not authorized, token expired'
+            : 'Not authorized, token invalid',
+      });
     }
-}   
-
+  } else {
+    return res.status(401).json({ message: 'Not authorized, no token' });
+  }
+};

@@ -1,137 +1,29 @@
+// src/routes/rooms.ts
 import express from 'express';
-import Room, { IRoomMemberData,IRoomMember } from '../models/Room';
-import { auth } from '../middleware/auth';
-import { Types} from 'mongoose';
-import * as roomController from '../controllers/roomController';
+import { protect } from '../middleware/auth'; // Assuming 'protect' middleware is defined here
+// Import your controller functions
+import { createRoom, getRoom, joinRoom, updateMemberStatus } from '../controllers/roomController';
 
-//creates a new router object
 const router = express.Router();
 
-//create a new room
-router.post('/', auth, roomController.createRoom);
+// @route   POST /api/rooms
+// @desc    Create a new collaboration room
+// @access  Private
+router.post('/', protect, createRoom);
 
+// @route   GET /api/rooms/:roomCode
+// @desc    Get room details by code
+// @access  Private (accessible by members or for join requests)
+router.get('/:roomCode', protect, getRoom);
 
-//create a new room
-/*
-router.post('/', auth, async(req: express.Request, res: express.Response) => {
-    try{
-        //generate unique room ID
-        // simple way to generate a random 6-character string
-        const roomId = Math.random().toString(36).substring(2,8).toUpperCase();
+// @route   POST /api/rooms/:roomCode/join
+// @desc    Request to join a room
+// @access  Private
+router.post('/:roomCode/join', protect, joinRoom);
 
-        //create a new instance of Room model
-        //with generated roomId, owner's ID
-        // and adds owner as first approved member using subdocument creation
-        const ownerMember:IRoomMemberData = {
-            user: req.user._id as Types.ObjectId,
-            status: 'approved'
-        };
-        const room = new Room({
-            roomId,
-            owner: req.user._id as Types.ObjectId,
-            members: [ownerMember]
-        });
+// @route   PUT /api/rooms/:roomCode/members/:memberId/status
+// @desc    Update a member's status (approve/reject)
+// @access  Private (Owner only)
+router.put('/:roomCode/members/:memberId/status', protect, updateMemberStatus);
 
-        //saves this new room object to db
-        await room.save();
-
-        //sends a response back to client 
-        res.status(201).json({
-            roomId,
-            link: `${process.env.CLIENT_URL}/join/${roomId}`
-        });
-    }catch (err) {
-        res.status(500).json({message: 'Server error'})
-    }
-});
-*/
-
-
-//join room request
-router.post('/:roomCode/join', auth, async (req: express.Request, res: express.Response) => {
-    try{
-        //finds a single document in Room collection where roomId
-        //matches the one from URL
-        const room = await Room.findOne({roomCode: req.params.roomCode});
-        if (!room) {
-            return res.status(404).json({message: 'Room not found.'})
-        }
-
-        //check if already a member
-        const existingMember = room.members.find((member: IRoomMember) =>
-            member.user.toString() === req.user?._id.toString()
-        );
-
-        if (existingMember) {
-            return res.status(400).json({ message: 'Already in room' });
-        }
-
-        //add join request
-        const newMember: IRoomMemberData = { user: req.user._id as Types.ObjectId, status: 'pending' };
-        room.members.push(newMember);
-        await room.save();
-        res.json({ message: 'Join request sent' });
-        } catch (err) {
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-//handle join request
-router.put('/:room/requests/:userId', auth, async (req: express.Request, res: express.Response) => {
-    try{
-        const {action} = req.body;
-        const room = await Room.findOne({
-            roomCode: req.params.roomCode,
-            owner: req.user?._id as Types.ObjectId
-        });
-
-        if (!room) {
-            return res.status(404).json({ message: 'Room not found' });
-        }
-
-        const memberIndex = room.members.findIndex((member: IRoomMember) =>
-            member.user.toString() === req.params.userId &&
-            member.status === 'pending'
-        );
-
-        if (memberIndex === -1) {
-            return res.status(404).json({message: "Request not found."})
-        }
-
-        if (action === 'approve') {
-            room.members[memberIndex].status = 'approved';
-        }else if (action === 'reject') {
-            room.members.splice(memberIndex,1) //remove the member
-        }else {
-            return res.status(400).json({ message: 'Invalid action. Must be "approve" or "reject".' });
-        }
-        
-        await room.save();
-        res.json(room)
-    }catch(err) {
-        res.status(500).json({message: 'Server error'})
-    }
-});
-
-//get room deatils
-/*
-router.get('/:roomId', auth, async(req: express.Request, res: express.Response) => {
-    try{
-        const room = await Room.findOne({roomId: req.params.roomId})
-            .populate('owner', 'username')
-            .populate('members.user', 'username');
-        
-            if (!room) {
-                return res.status(404).json({message: "Room not found."})
-            }
-
-            res.json(room);
-    }catch(err) {
-        res.status(500).json({ message: 'Server error' });
-    }
-});
-*/
-
-//new code
-router.get('/:roomCode', auth, roomController.getRoom);
 export default router;
