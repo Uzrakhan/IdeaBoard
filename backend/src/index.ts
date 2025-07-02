@@ -1,5 +1,9 @@
 // src/index.ts
 // This is the new main entry point for your server application.
+    // This log should appear every time this file is executed.
+    console.log('#########################################################');
+    console.log('##################### INDEX.TS EXECUTED #####################');
+    console.log('#########################################################');
 
 // Import the 'server' instance (along with app, io, connectedUsers) from server.ts
 // This will initialize all the Express and Socket.IO setup.
