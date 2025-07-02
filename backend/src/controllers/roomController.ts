@@ -139,7 +139,9 @@ export const joinRoom = async (req: AuthRequest, res: express.Response) => {
   }
 
   try {
-      console.log(`[JoinRoom Controller] Step 1: Attempting to find room with code: ${roomCode}`);
+      // --- NEW ULTRA-PRECISE LOG ---
+      console.log(`[JoinRoom Controller] ABOUT TO CALL Room.findOne for roomCode: ${roomCode}`);
+      // --- END NEW ULTRA-PRECISE LOG ---
       const room = await Room.findOne({ code: roomCode });
 
       if (!room) {
@@ -151,7 +153,6 @@ export const joinRoom = async (req: AuthRequest, res: express.Response) => {
       // --all other logic ocmmented out for isolation
       console.log(`[JoinRoom Controller END - MINIMAL] Returning success for room ${roomCode}.`);
       
-      /*
       console.log(`[JoinRoom Controller] Step 2: Checking if user ${userId} is an existing member.`);
       const existingMember = room.members.find(m => m.user?._id?.toString() === userId);
 
@@ -224,7 +225,6 @@ export const joinRoom = async (req: AuthRequest, res: express.Response) => {
       console.log('[JoinRoom Controller] Step 8.1: roomUpdated emitted.');
 
       console.log(`[JoinRoom Controller END] User ${userId} successfully sent join request for room ${roomCode}.`);
-      */
       res.status(200).json({ message: 'Minimal join request processed (no actual join logic executed).', room: room });
   } catch (err: any) {
     console.error('----- [JoinRoom Controller] CAUGHT EXCEPTION (Outer - MINIMAL) -----');
