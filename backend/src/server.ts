@@ -28,12 +28,11 @@ import mongoose from 'mongoose';
 import { Low } from 'lowdb';
 import { JSONFile } from 'lowdb/node';
 //import type { Socket } from 'socket.io/dist/socket';
-import authRoutes from './routes/auth';
-import roomRoutes from './routes/rooms';
 
 dotenv.config();
 
 const app = express();
+const server = createServer(app);
 const allowedOrigins = [
   'https://idea-board-virid.vercel.app',
   'http://localhost:5173'
@@ -69,10 +68,6 @@ app.post('/api/auth/test', (req: any, res: { status: (arg0: number) => { (): any
     res.status(200).json({ message: 'Test route hit!' });
 });
 // --- END TEMPORARY DIAGNOSTIC ROUTE ---
-
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/rooms', roomRoutes);
 
 // Database Connection
 const connectDB = async () => {
@@ -111,8 +106,6 @@ let drawingLines: DrawingLine[] = [];
   drawingLines = db.data.drawingLines;
 })();
 
-// HTTP Server with Socket.io
-const server = createServer(app);
 
 //Make connectedUsers map accessible globally  (within server.ts code)
 const connectedUsers = new Map<string, string>(); // userId -> socketId
@@ -211,6 +204,19 @@ io.on('connection', (socket: Socket) => {
   })
 });
 
+// --- EXPORT io and connectedUsers BEFORE importing routes that might use them ---
+// This is the CRITICAL change to break potential circular dependencies.
+// --- EXPORT io and connectedUsers BEFORE importing routes that might use them ---
+// This is the CRITICAL change to break potential circular dependencies.
+export { app, io, connectedUsers, server };
+
+import authRoutes from './routes/auth';
+import roomRoutes from './routes/rooms';
+
+app.use('/api/auth', authRoutes);
+app.use('/api/rooms', roomRoutes);
+
+
 // Error Handling
 app.use((err: { stack: any; }, req: any, res: { status: (arg0: number) => { (): any; new(): any; json: { (arg0: { message: string; }): void; new(): any; }; }; }, next: any) => {
   console.error(err.stack);
@@ -240,15 +246,10 @@ if (process.env.NODE_ENV !== 'test') {
   startServer();
 }
 
-// Global Error Handlers
-process.on('uncaughtException', (err: Error) => {
-  console.error('[CRITICAL] Uncaught Exception:', err);
-  process.exit(1);
-});
 
-process.on('unhandledRejection', (reason: unknown, promise: Promise<any>) => {
-  console.error('[CRITICAL ERROR] Unhandled Rejection at:', promise, 'reason:', reason);
-  process.exit(1);
-});
 
-export default { app, io, connectedUsers };
+// Start the HTTP server (if this file is the entry point for your backend)
+const PORT = process.env.PORT || 5000; // Use environment variable PORT or default to 5000
+server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
