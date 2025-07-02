@@ -223,6 +223,8 @@ app.use((err: { stack: any; }, req: any, res: { status: (arg0: number) => { (): 
   res.status(500).json({ message: 'Internal server error' });
 });
 
+
+/*
 // Start Server
 const startServer = async () => {
   try {
@@ -240,16 +242,10 @@ const startServer = async () => {
     process.exit(1);
   }
 };
-
+*/
+/*
 // Start if not in test environment
 if (process.env.NODE_ENV !== 'test') {
   startServer();
 }
-
-
-
-// Start the HTTP server (if this file is the entry point for your backend)
-const PORT = process.env.PORT || 5000; // Use environment variable PORT or default to 5000
-server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+*/
