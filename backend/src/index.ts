@@ -13,19 +13,32 @@ import connectDB from './config/db';
 // Get the port from environment variables or default to 5000
 const PORT = process.env.PORT || 5000;
 
-// Start the HTTP server by calling the listen method on the imported 'server' instance.
-server.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
-
 
 // Call connectDB BEFORE starting the server to ensure DB is ready
 connectDB().then(() => {
+    console.log('Database connection successful. Attempting to start HTTP server...');
+
+    // Start the HTTP server by calling the listen method on the imported 'server' instance.
     server.listen(PORT, () => {
         console.log(`Server is running on port ${PORT}`);
+    });
+
+
+    // Add an error handler for the server's 'error' event.
+    // This is crucial for catching errors like EADDRINUSE (address already in use).
+    server.on('error', (err: NodeJS.ErrnoException) => {
+        if (err.code === 'EADDRINUSE') {
+            console.error(`Port ${PORT} is already in use. This might indicate a previous process did not shut down cleanly, or Render is attempting to restart too quickly.`);
+        } else {
+            console.error('Server encountered an unexpected error:', err);
+        }
+        // Exit the process to allow Render to attempt a clean restart
+        process.exit(1);
     });
 }).catch(err => {
     console.error('Failed to start server due to database connection error:', err);
     process.exit(1);
 });
+
+
 

@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 
-dotenv.config(); // Ensure dotenv is configured here too if this file is imported directly
+dotenv.config(); // Ensure dotenv is configured here if this file is imported directly
 
 const connectDB = async () => {
     try {
@@ -9,23 +9,40 @@ const connectDB = async () => {
 
         if (!mongoURI) {
             console.error('MongoDB URI is not defined in environment variables!');
-            process.exit(1); // Exit if URI is missing
+            // Exit process if DB URI is missing - critical for app function
+            process.exit(1);
         }
 
-        // Mongoose connection options (optional, but good for stability)
+        // Mongoose connection event listeners for better debugging
+        mongoose.connection.on('connected', () => {
+            console.log('Mongoose default connection open to ' + mongoose.connection.host);
+        });
+
+        mongoose.connection.on('error', (err) => {
+            console.error('Mongoose default connection error: ' + err);
+            // Exit process on DB connection error - critical for app function
+            process.exit(1);
+        });
+
+        mongoose.connection.on('disconnected', () => {
+            console.log('Mongoose default connection disconnected');
+        });
+
+        // Attempt to connect to MongoDB
         const conn = await mongoose.connect(mongoURI, {
             // useNewUrlParser: true, // Deprecated in Mongoose 6+
             // useUnifiedTopology: true, // Deprecated in Mongoose 6+
-            serverSelectionTimeoutMS: 20000, // Increase timeout to 15 seconds
-            socketTimeoutMS: 45000, // Increase socket timeout to 45 seconds
+            serverSelectionTimeoutMS: 30000, // Increase timeout to 30 seconds for Render
+            socketTimeoutMS: 60000, // Increase socket timeout to 60 seconds
         });
 
         console.log(`MongoDB connected: ${conn.connection.host}`);
+        return conn; // Return the connection instance
     } catch (err: any) {
-        console.error(`MongoDB connection error: ${err.message}`);
-        // Log the full error object for more details
+        console.error(`MongoDB connection error (in catch block): ${err.message}`);
         console.error('MongoDB connection error details:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
-        process.exit(1); // Exit process on connection failure
+        // Exit process on connection failure
+        process.exit(1);
     }
 };
 
