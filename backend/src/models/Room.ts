@@ -47,10 +47,15 @@ const RoomSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
-    members: [{ // This defines the schema for subdocuments in the 'members' array
-        user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-        status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' }
-    }],
+    members: {
+        type: [
+            {
+            user: { type: Schema.Types.ObjectId, ref: 'User' },
+            status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+            }
+    ],
+        default: []
+    },
     createdAt: { type: Date, default: Date.now }
 });
 

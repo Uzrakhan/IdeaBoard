@@ -57,7 +57,9 @@ export const getRoom = async (req: AuthRequest, res: express.Response) => {
 
         const roomOwner = room.owner as IUser;
         const isOwner = roomOwner?._id?.toString() === userId;
-        const isApprovedMember = room.members.some(m => (m.user as IUser)?._id?.toString() === userId && m.status === 'approved');
+        const isApprovedMember = Array.isArray(room.members) && room.members.some(
+            m => (m.user as IUser)?._id?.toString() === userId && m.status === 'approved'
+        );
 
         if (!isApprovedMember && !isOwner) {
             return res.status(200).json({
