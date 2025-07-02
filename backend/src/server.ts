@@ -24,9 +24,9 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { Socket } from 'socket.io/dist/socket';
 import dotenv from 'dotenv';
-import mongoose from 'mongoose';
 import { Low } from 'lowdb';
 import { JSONFile } from 'lowdb/node';
+import connectDB from './config/db';
 //import type { Socket } from 'socket.io/dist/socket';
 
 dotenv.config();
@@ -69,9 +69,10 @@ app.post('/api/auth/test', (req: any, res: { status: (arg0: number) => { (): any
 });
 // --- END TEMPORARY DIAGNOSTIC ROUTE ---
 
+/*
 // Database Connection
 const connectDB = async () => {
-  const mongoUri = process.env.MONGODB_URI;
+  const mongoUri = process.env.MONGO_URI;
   if (!mongoUri) {
     console.error('MongoDB URI is not defined.')
     throw new Error('MongoDB URI is not defined. Set MONGODB_URI environment variable.');
@@ -84,6 +85,7 @@ const connectDB = async () => {
     throw err;
   }
 };
+*/
 
 // LowDB Setup for Drawing Lines
 type Point = { x: number; y: number };
