@@ -1,7 +1,7 @@
 // This file contains API controller functions related to Room management
 //(creating,getting,updating,joining room) 
 //acts as bridge between frontend requests & backend data
-//It interacts with database and usese server.io
+//It interacts with database and usese io
 
 import express from 'express';
 import mongoose from 'mongoose';
@@ -11,7 +11,7 @@ import Room from "../models/Room";
 import { IRoom } from "../models/Room";
 import { IRoomMember } from "../models/Room";
 import User, { IUser } from "../models/User";
-import server from '../server'
+import { io, connectedUsers } from '../server'
 import { AuthRequest } from '../middleware/auth'
 
 
@@ -207,9 +207,9 @@ export const joinRoom = async (req: AuthRequest, res: express.Response) => {
       console.log('[JoinRoom Controller] Step 6.1: New pending member details:', newPendingMember?.user?.username || 'N/A');
 
       console.log('[JoinRoom Controller] Step 7: Attempting Socket.IO notification to owner.');
-      const ownerSocketId = server.connectedUsers.get(populatedRoom.owner?._id?.toString() || '');
+      const ownerSocketId = connectedUsers.get(populatedRoom.owner?._id?.toString() || '');
       if (ownerSocketId) {
-          server.io.to(ownerSocketId).emit('newJoinRequest', {
+          io.to(ownerSocketId).emit('newJoinRequest', {
               roomCode: room.roomCode,
               requester: newPendingMember?.user?.username || 'Unknown User',
               requesterId: userId,
@@ -221,7 +221,7 @@ export const joinRoom = async (req: AuthRequest, res: express.Response) => {
       }
 
       console.log('[JoinRoom Controller] Step 8: Emitting roomUpdated to room.');
-      server.io.to(roomCode).emit('roomUpdated', { room: populatedRoom });
+      io.to(roomCode).emit('roomUpdated', { room: populatedRoom });
       console.log('[JoinRoom Controller] Step 8.1: roomUpdated emitted.');
 
       console.log(`[JoinRoom Controller END] User ${userId} successfully sent join request for room ${roomCode}.`);
@@ -300,9 +300,9 @@ export const updateMemberStatus = async (req: AuthRequest, res: express.Response
     const updatedUser = populatedRoom.members.find(m => m.user?._id?.toString() === memberId)?.user?.username || 'A user';
 
     // Notify owner's active socket (if connected)
-    const ownerSocketId = server.connectedUsers.get(ownerId); // Get owner's socket ID from map
+    const ownerSocketId = connectedUsers.get(ownerId); // Get owner's socket ID from map
     if (ownerSocketId) {
-      server.io.to(ownerSocketId).emit('memberStatusUpdated', {
+      io.to(ownerSocketId).emit('memberStatusUpdated', {
         roomCode: room.roomCode,
         memberId: memberId,
         status: memberStatus,
@@ -312,9 +312,9 @@ export const updateMemberStatus = async (req: AuthRequest, res: express.Response
 
     // Also emit directly to the updated user's socket if they are connected
     // Notify the updated user's active socket (if connected)
-    const memberSocketId = server.connectedUsers.get(memberId); // Get member's socket ID from map
+    const memberSocketId = connectedUsers.get(memberId); // Get member's socket ID from map
     if (memberSocketId) {
-        server.io.to(memberSocketId).emit('yourRoomStatusUpdated', {
+        io.to(memberSocketId).emit('yourRoomStatusUpdated', {
             roomCode: room.roomCode,
             status: memberStatus,
             message: `Your status in room ${room.roomCode} is now ${memberStatus}.`
@@ -322,7 +322,7 @@ export const updateMemberStatus = async (req: AuthRequest, res: express.Response
     }
 
     // Emit to the specific Socket.IO room (all conncetd users) for general updates (e.g., member list changes)
-    server.io.to(roomCode).emit('roomUpdated', { room: populatedRoom }); // Let all room members know the room object updated
+    io.to(roomCode).emit('roomUpdated', { room: populatedRoom }); // Let all room members know the room object updated
     console.log(`[UpdateMemberStatus] User ${memberId} status updated to ${memberStatus} in room ${room.roomCode}`);
     res.status(200).json({ message: `Member status updated to ${memberStatus}.`, room: populatedRoom });
   }catch(err: any){
