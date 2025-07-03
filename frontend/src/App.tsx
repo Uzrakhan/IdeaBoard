@@ -179,9 +179,10 @@ const WhiteboardWrapper: React.FC<WhiteboardWrapperProps> = ({ setCurrentRoom })
       setError(null); //clear previous errors
       try {
         const response = await getRoom(roomCode);
-        console.log("Fetched room data:", response.data); // Added this line
-        setRoom(response.data);
-        setCurrentRoom(response.data);
+        const roomData = response.data;
+        console.log("Fetched room data:", roomData); // Added this line
+        setRoom(roomData);
+        setCurrentRoom(roomData);
       }catch(err: any) {
         console.error("Error fetching room for whiteboard:", err);
         setError(err.response?.data?.message || 'Failed to load room details.');
@@ -228,7 +229,7 @@ const JoinRoomWrapper: React.FC<JoinRoomWrapperProps> = ({ currentRoom, setCurre
       // If currentRoom is already set and matches the URL, no need to refetch
       // unless we need to ensure the most up-to-date member status.
       // For a simple check, we can skip fetch if already loaded.
-      if (currentRoom && currentRoom.roomCode === roomCode && !isLoading) {
+      if (currentRoom && currentRoom?.roomCode === roomCode && !isLoading) {
         // Check member status here to decide immediate redirect
         const isApprovedMember = currentRoom?.members?.some(
           m => m.user._id === userId && m.status === "approved"
@@ -249,15 +250,16 @@ const JoinRoomWrapper: React.FC<JoinRoomWrapperProps> = ({ currentRoom, setCurre
 
       try {
         const response = await getRoom(roomCode);// Fetch room data from API
-        setCurrentRoom(response.data);// Update current room state
+        const fetchedRoom = response.data;
+        setCurrentRoom(fetchedRoom);// Update current room state
         
         //after fetching,immediately check status and redirect if approved
-        const isApprovedMember = response.data?.members?.some(
+        const isApprovedMember = fetchedRoom?.members?.some(
           (m: { user: { _id: string | null; }; status: string; }) => m.user._id === userId && m.status === "approved"
         ) ?? false;
         if (isApprovedMember) {
           console.log("Fetched room and found user is approved member, redirecting.");
-          navigate(`/room/${response.data.roomCode}`)
+          navigate(`/room/${fetchedRoom.roomCode}`)
         }
         
       } catch (err: any) {
