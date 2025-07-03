@@ -72,6 +72,7 @@ export const getRoom = async (req: AuthRequest, res: express.Response) => {
                 room: {
                     _id: room._id?.toString(),
                     roomCode: room.roomCode,
+                    name: room.name,
                     owner: {
                         _id: roomOwner._id?.toString(),
                         username: roomOwner.username || 'Unknown Owner'
