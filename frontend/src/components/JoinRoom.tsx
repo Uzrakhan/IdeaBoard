@@ -16,6 +16,28 @@ const JoinRoom: React.FC<JoinRoomProps> = ({ room }) => {
   const userId = localStorage.getItem('userId');
   useAuth();
 
+  //safety check
+  if(!room || !room.owner || !room.members || !room.roomCode){
+    return (
+      <div className='text-center mt-10 text-red-600'>
+        Error: Room details are incomplete or failed to load.
+      </div>
+    )
+  }
+
+
+    // ✅ Debug logs
+  console.log('JoinRoom | Room:', room);
+  console.log('Owner:', room.owner);
+  console.log('Members:', room.members);
+
+  const isOwner = room?.owner?._id === userId;
+
+  const isApprovedMember =
+  room?.members?.some(
+    (m) => m?.user?._id === userId && m.status === 'approved'
+  ) ?? false;
+
   // Check if user already sent request
   const hasPendingRequest =
     room?.members?.some(
@@ -35,19 +57,17 @@ const JoinRoom: React.FC<JoinRoomProps> = ({ room }) => {
     }
   };
 
-  const isOwner = room?.owner?._id === userId;
-
-  const isApprovedMember =
-    room?.members?.some(
-      (m) => m?.user?._id === userId && m.status === 'approved'
-    ) ?? false;
-
   useEffect(() => {
     if (isApprovedMember && !isOwner) {
       console.log('User is now an approved member, redirecting to whiteboard.');
       navigate(`/room/${room.roomCode}`);
     }
   }, [isApprovedMember, isOwner, navigate, room.roomCode]);
+
+  // ✅ Filter out the owner from members list
+  const memberCount = room.members.filter(
+    (m) => m.status === 'approved' && m.user._id !== room.owner._id
+  ).length;
 
   if (error) {
     return (
@@ -112,7 +132,7 @@ const JoinRoom: React.FC<JoinRoomProps> = ({ room }) => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-3-3H5a3 3 0 00-3 3v2h5m0 0a3 3 0 003 3h4a3 3 0 003-3m-7.5-2.5a3 3 0 11-6 0 3 3 0 016 0zm3.5 0a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
           <span>
-            {room?.members?.filter((m) => m.status === 'approved')?.length || 0} members
+            {memberCount} members
           </span>
         </div>
 
@@ -150,7 +170,7 @@ const JoinRoom: React.FC<JoinRoomProps> = ({ room }) => {
                 <svg className="w-6 h-6 mr-2 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                Join request sent to room owner. Awaiting approval.
+                  ⏳ Join request sent. Awaiting approval.
               </div>
             ) : (
               <button
