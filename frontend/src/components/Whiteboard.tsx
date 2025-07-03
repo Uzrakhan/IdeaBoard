@@ -3,6 +3,8 @@ import { socket } from '../socket';
 import type { Room } from '../types';
 import { useAuth } from '../context/AuthContext';
 import RoomAdminPanel from './RoomAdminPanel';
+import { useParams } from 'react-router-dom';
+import { getRoom } from '../api';
 /*
 // Mock room data - in a real app, this would come from an API
 const mockRoom: Room = {
@@ -22,10 +24,12 @@ const mockRoom: Room = {
 }
 */
 
+/*
 interface WhiteboardProps {
   room: Room;
   setCurrentRoom: React.Dispatch<React.SetStateAction<Room | null>>;
 }
+*/
 
 type Point = { x: number; y: number };
 type DrawingLine = {
@@ -34,8 +38,10 @@ type DrawingLine = {
   width: number;
 };
 
-const Whiteboard: React.FC<WhiteboardProps> = ({ room, setCurrentRoom }) => {
-  console.log("🧩 ROOM DATA in Whiteboard:", room);
+const Whiteboard: React.FC = () => {
+  const { roomCode } = useParams();
+  const [room,setRoom] = useState<Room | null>(null);
+  const [error,setError] = useState('');
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -49,16 +55,27 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ room, setCurrentRoom }) => {
   const [canvasDimensions, setCanvasDimensions] = useState({ width: 0, height: 0 });
   //const [message,setMessage] = useState('');// For Socket.IO notifications
   //access room details directtly from teh 'room' prop
-  const currentRoom = room;
+  //const currentRoom = room;
 
   // Use the auth context to get the current user
   const { currentUser } = useAuth();
 
   //determine if current user is owner
-  const isOwner = currentUser && room.owner._id === currentUser._id;
+  const isOwner = currentUser && room?.owner?._id === currentUser._id;
 
   console.log('Current User from AuthContext:', currentUser);
   
+  useEffect(() => {
+    if(!roomCode) return;
+    getRoom(roomCode)
+      .then(res => {
+        const fetchedRoom = res.data.room || res.data;
+        setRoom(fetchedRoom)
+      })
+      .catch(() => setError('Room not found.'))
+  },[roomCode]);
+  
+
   // Keep refs updated with current state
   useEffect(() => {
     colorRef.current = color;
@@ -67,7 +84,11 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ room, setCurrentRoom }) => {
 
   //handler for the Invite button
   const handleInviteClick = async() => {
-    const inviteLink = `${window.location.origin}/join/${currentRoom.roomCode}`;
+    if (!room) {
+      alert('Room information is not available.');
+      return;
+    }
+    const inviteLink = `${window.location.origin}/join/${room.roomCode}`;
     console.log("Attempting to copy link:", inviteLink); // Debugging
     try{
       await navigator.clipboard.writeText(inviteLink);
@@ -231,7 +252,9 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ room, setCurrentRoom }) => {
     
     // Add to local storage and emit to server
     linesRef.current = [...linesRef.current, newLine];
-    socket.emit('draw', newLine, room.roomCode);
+    if (room) {
+      socket.emit('draw', newLine, room.roomCode);
+    }
   };
 
   // Draw while moving
@@ -270,7 +293,9 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ room, setCurrentRoom }) => {
         updatedLine
       ];
       
-      socket.emit('draw', updatedLine, room.roomCode);
+      if (room) {
+        socket.emit('draw', updatedLine, room.roomCode);
+      }
     }
     
     lastPointRef.current = point;
@@ -293,7 +318,9 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ room, setCurrentRoom }) => {
     }
     
     linesRef.current = [];
-    socket.emit('clear', room.roomCode);
+    if (room) {
+      socket.emit('clear', room.roomCode);
+    }
   };
 
   // Touch event handlers
@@ -313,6 +340,9 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ room, setCurrentRoom }) => {
             Loading Room...
           </div>;
   }
+
+  if (error) return <div className="text-center mt-10 text-red-600">{error}</div>;
+
 
   return (
     <div className='bg-gray-100 min-h-screen font-inter'> {/* Added font-inter to root div */}
@@ -445,7 +475,7 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ room, setCurrentRoom }) => {
                 {/* Room Admin Panel - only show for room owner */}
                 {isOwner && (
                     <div className="bg-white rounded-xl shadow-md mt-6 p-4">
-                        <RoomAdminPanel room={room} setCurrentRoom={setCurrentRoom} />
+                        <RoomAdminPanel room={room} setCurrentRoom={setRoom} />
                     </div>
                 )}
             </div>
