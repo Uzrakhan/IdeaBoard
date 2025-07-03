@@ -44,6 +44,11 @@ export const createRoom = async (req: AuthRequest, res: express.Response) => {
 };
 
 export const getRoom = async (req: AuthRequest, res: express.Response) => {
+    // --- NEW: VERY FIRST LOG IN GETROOM ---
+    console.log(`[getRoom Controller - START] Request received for room: ${req.params.roomCode || 'N/A'}`);
+    console.log(`[getRoom Controller - START] User ID from request: ${req.user?._id?.toString() || 'N/A'}`);
+    // --- END NEW LOG ---
+
     const { roomCode } = req.params;
     const userId = (req.user as IUser)?._id?.toString();
     if (!userId) return res.status(401).json({ message: 'Not authenticated' });
