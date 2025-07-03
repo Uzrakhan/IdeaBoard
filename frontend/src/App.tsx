@@ -87,7 +87,7 @@ const App: React.FC = () => {
           <Route
             path="/room/:roomCode"
             element={
-              isAuthenticated && currentRoom ? (
+              isAuthenticated ? (
                 <Layout>
                   <WhiteboardWrapper setCurrentRoom={setCurrentRoom} />
                 </Layout>
@@ -129,7 +129,9 @@ const WhiteboardWrapper: React.FC<{ setCurrentRoom: React.Dispatch<React.SetStat
   }, [roomCode, navigate, setCurrentRoom]);
 
   if (loading) return <div>Loading whiteboard...</div>;
-  if (error || !room) return <Navigate to="/" />;
+  if (error) return <div className="text-center text-red-600">Error: {error}</div>;
+  if (!room) return <div className="text-center">Room not found.</div>;
+
   return <Whiteboard room={room} setCurrentRoom={setCurrentRoom} />;
 };
 
