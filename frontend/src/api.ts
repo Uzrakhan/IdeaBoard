@@ -74,11 +74,15 @@ export const joinRoom = (roomCode: string) =>
     api.post(`/rooms/${roomCode}/join`)
         .catch(handleError);
 
-export const getRoom = (roomCode: string) => 
-    api.get(`/rooms/${roomCode}`)
-        .then(res => res.data.room)
-        .catch(handleError);
-
+export const getRoom = async (roomCode: string) => {
+  try {
+    const res = await api.get(`/rooms/${roomCode}`);
+    return res.data.room;
+  } catch (error) {
+    handleError(error);
+    throw error;
+  }
+}
 
 export const updateRoomMemberStatus = (
     roomCode: string,
