@@ -35,7 +35,7 @@ type DrawingLine = {
 };
 
 const Whiteboard: React.FC<WhiteboardProps> = ({ room, setCurrentRoom }) => {
-  
+  console.log("🧩 ROOM DATA in Whiteboard:", room);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -307,6 +307,10 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ room, setCurrentRoom }) => {
     draw(e);
   };
 
+  if (!room?.owner || !room.owner.username) {
+    return <div className="text-red-500 text-center mt-10">Room details are incomplete or failed to load.</div>;
+  }
+
   return (
     <div className='bg-gray-100 min-h-screen font-inter'> {/* Added font-inter to root div */}
             <div className='max-w-7xl mx-auto px-4 py-6'>
@@ -319,7 +323,7 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ room, setCurrentRoom }) => {
                                 </span>
                             </h1>
                             <p className='text-gray-600'>
-                                Created by: {room.owner.username} {/* Use 'room' prop directly */}
+                                Created by: {room.owner?.username ?? 'Unknown Owner'} {/* Use 'room' prop directly */}
                             </p>
                         </div>
 
