@@ -87,7 +87,10 @@ export const getRoom = async (req: AuthRequest, res: express.Response) => {
             });
         }
 
-        res.status(200).json(room);
+        res.status(200).json({
+            ...room.toObject(),
+            members: Array.isArray(room.members) ? room.members : []
+        });
     } catch (err: any) {
         res.status(500).json({ message: "Server error", details: err.message });
     }
