@@ -307,6 +307,7 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ room, setCurrentRoom }) => {
     draw(e);
   };
 
+  console.log("Whiteboard received room:", room);
   if (!room?.owner || !room.owner.username) {
     return <div className="text-red-500 text-center mt-10">Room details are incomplete or failed to load.</div>;
   }

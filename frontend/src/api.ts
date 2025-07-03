@@ -70,14 +70,13 @@ export const createRoom = async () => {
   }
 };
 
-
-
 export const joinRoom = (roomCode: string) =>
     api.post(`/rooms/${roomCode}/join`)
         .catch(handleError);
 
 export const getRoom = (roomCode: string) => 
     api.get(`/rooms/${roomCode}`)
+        .then(res => res.data.room)
         .catch(handleError);
 
 

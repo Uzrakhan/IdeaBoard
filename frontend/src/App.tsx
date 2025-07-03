@@ -115,8 +115,9 @@ const WhiteboardWrapper: React.FC<{ setCurrentRoom: React.Dispatch<React.SetStat
       if (!roomCode) return;
       try {
         const response = await getRoom(roomCode);
-        setRoom(response.data);
-        setCurrentRoom(response.data);
+        if(!response) throw new Error('Room not found');
+        setRoom(response);
+        setCurrentRoom(response);
       } catch (err: any) {
         setError(err.response?.data?.message || 'Failed to load room');
         navigate('/');
