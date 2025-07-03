@@ -1,5 +1,5 @@
 import React from 'react';
-import { updateRoomMemberStatus } from '../api';
+import { getRoom, updateRoomMemberStatus } from '../api';
 import type { Room } from '../types';
 
 interface RoomAdminPanelProps {
@@ -13,20 +13,10 @@ const RoomAdminPanel: React.FC<RoomAdminPanelProps> = ({ room, setCurrentRoom })
     const handleRequest = async (userId: string, status: 'approved' | 'rejected') => {
         try {
             await updateRoomMemberStatus(room.roomCode, userId, status);
-            setCurrentRoom(prev => {
-                if (!prev) return null;
 
-                let updatedMembers = prev.members;
-                if (status === 'approved') {
-                    updatedMembers = prev.members.map(member =>
-                        member.user._id === userId ? { ...member, status: 'approved' } : member
-                    );
-                } else if (status === 'rejected') {
-                    updatedMembers = prev.members.filter(member => member.user._id !== userId);
-                }
-
-                return { ...prev, members: updatedMembers };
-            });
+            // 🔁 Re-fetch fresh room from server
+            const response = await getRoom(room.roomCode);
+            setCurrentRoom(response.data)
         } catch (error) {
             console.error('Failed to handle request', error);
         }
