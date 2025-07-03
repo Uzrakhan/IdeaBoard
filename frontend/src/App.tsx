@@ -114,10 +114,10 @@ const WhiteboardWrapper: React.FC<{ setCurrentRoom: React.Dispatch<React.SetStat
     const fetchRoomDetails = async () => {
       if (!roomCode) return;
       try {
-        const response = await getRoom(roomCode);
-        if(!response) throw new Error('Room not found');
-        setRoom(response);
-        setCurrentRoom(response);
+        const data = await getRoom(roomCode);
+        if(!data) throw new Error('Room not found');
+        setRoom(data.room);
+        setCurrentRoom(data.room);
       } catch (err: any) {
         setError(err.response?.data?.message || 'Failed to load room');
         navigate('/');
@@ -158,9 +158,9 @@ const JoinRoomWrapper: React.FC<{
       }
 
       try {
-        const res = await getRoom(roomCode);
-        setCurrentRoom(res.data);
-        const isApproved = res.data.members?.some(
+        const data = await getRoom(roomCode);
+        setCurrentRoom(data.room);
+        const isApproved = data.room.members?.some(
           (m: any) => m?.user?._id?.toString() === userId && m.status === 'approved'
         );
         if (isApproved) navigate(`/room/${roomCode}`);

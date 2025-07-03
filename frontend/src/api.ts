@@ -77,7 +77,7 @@ export const joinRoom = (roomCode: string) =>
 export const getRoom = async (roomCode: string) => {
   try {
     const res = await api.get(`/rooms/${roomCode}`);
-    return res.data.room;
+    return res.data;
   } catch (error) {
     handleError(error);
     throw error;
