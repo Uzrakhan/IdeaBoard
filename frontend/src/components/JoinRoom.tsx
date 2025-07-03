@@ -45,8 +45,9 @@ const JoinRoom: React.FC<JoinRoomProps> = ({  room }) => {
     }, [roomCode, navigate]);
     */
 
-    const hasPendingRequest = room.members.some(
-        m => m.user._id === userId && m.status === "approved"
+    const hasPendingRequest = Array.isArray(room?.members) &&
+    room.members.some(
+        m => m.user._id === userId && m.status === "pending"
     )
 
     const handleJoinRequest = async () => {
@@ -68,7 +69,7 @@ const JoinRoom: React.FC<JoinRoomProps> = ({  room }) => {
     //Important: This useEffect is for a user who might become approved while on this page
     //The primary redirect for approved users happes in JOinRoomWrapper
     const isOwner = room.owner._id === userId;
-    const isApprovedMember = room.members.some(
+    const isApprovedMember = Array.isArray(room?.members) && room.members.some(
         m => m.user._id === userId && m.status === "approved"
     );
 
@@ -149,7 +150,10 @@ const JoinRoom: React.FC<JoinRoomProps> = ({  room }) => {
                         <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-3-3H5a3 3 0 00-3 3v2h5m0 0a3 3 0 003 3h4a3 3 0 003-3m-7.5-2.5a3 3 0 11-6 0 3 3 0 016 0zm3.5 0a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
-                        <span>{room.members.filter(m => m.status === "approved").length} members</span>
+                        <span>{Array.isArray(room?.members) ? 
+                            room.members.filter(m => m.status === "approved").length
+                            : 0} members
+                        </span>
                     </div>
 
                 {isOwner ? (
