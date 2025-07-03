@@ -230,9 +230,9 @@ const JoinRoomWrapper: React.FC<JoinRoomWrapperProps> = ({ currentRoom, setCurre
       // For a simple check, we can skip fetch if already loaded.
       if (currentRoom && currentRoom.roomCode === roomCode && !isLoading) {
         // Check member status here to decide immediate redirect
-        const isApprovedMember = currentRoom.members.some(
+        const isApprovedMember = currentRoom?.members?.some(
           m => m.user._id === userId && m.status === "approved"
-        );
+        ) ?? false;
         if (isApprovedMember) {
           console.log("Already an approved member, redirecting to whiteboard.");
           navigate(`/room/${currentRoom.roomCode}`);
@@ -252,9 +252,9 @@ const JoinRoomWrapper: React.FC<JoinRoomWrapperProps> = ({ currentRoom, setCurre
         setCurrentRoom(response.data);// Update current room state
         
         //after fetching,immediately check status and redirect if approved
-        const isApprovedMember = response.data.members.some(
+        const isApprovedMember = response.data?.members?.some(
           (m: { user: { _id: string | null; }; status: string; }) => m.user._id === userId && m.status === "approved"
-        );
+        ) ?? false;
         if (isApprovedMember) {
           console.log("Fetched room and found user is approved member, redirecting.");
           navigate(`/room/${response.data.roomCode}`)
