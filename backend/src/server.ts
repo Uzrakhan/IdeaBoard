@@ -31,6 +31,9 @@ import connectDB from './config/db';
 
 dotenv.config();
 
+console.log('🔵 server.ts is starting...');
+debugger;
+
 const app = express();
 const server = createServer(app);
 const allowedOrigins = [
@@ -41,7 +44,7 @@ const allowedOrigins = [
 // Middleware
 app.use(
   cors({
-    origin: (origin: string, callback: (arg0: Error | null, arg1: boolean | undefined) => void) => {
+    origin: (origin: string | undefined, callback: (arg0: Error | null, arg1: boolean | undefined) => void) => {
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
@@ -56,18 +59,22 @@ app.use(
   })
 );
 
+app.options('*', cors())
+
 app.use(express.json());
 app.use((req: { method: any; url: any; }, res: any, next: () => void) => {
   console.log(`[Server] ${req.method} ${req.url}`);
   next();
 });
 
+/*
 // --- TEMPORARY DIAGNOSTIC ROUTE (add this line) ---
 app.post('/api/auth/test', (req: any, res: { status: (arg0: number) => { (): any; new(): any; json: { (arg0: { message: string; }): void; new(): any; }; }; }) => {
     console.log('[DIAGNOSTIC] /api/auth/test route hit!');
     res.status(200).json({ message: 'Test route hit!' });
 });
 // --- END TEMPORARY DIAGNOSTIC ROUTE ---
+*/
 
 /*
 // Database Connection
@@ -103,8 +110,8 @@ let drawingLines: DrawingLine[] = [];
 
 // Initialize LowDB
 (async () => {
-  await db.read();
-  db.data ||= { drawingLines: [] };
+  await db.read(); // 🛑 Set a breakpoint here to confirm DB is read
+  db.data ||= { drawingLines: [] }; // 🛑 Watch `db.data`
   drawingLines = db.data.drawingLines;
 })();
 
@@ -135,6 +142,10 @@ io.on('connection', (socket: Socket) => {
 
   // --- NEW: Handle client joining a specific room ---
   socket.on('joinRoom', (roomCode: string, userId: string) => {
+    //add validation
+    if (typeof roomCode !== 'string' || roomCode.length > 20) {
+      return socket.disconnect(true);
+    }
     socket.join(roomCode); //make this socket join a Socket.IO room named by roomCode
     connectedUsers.set(userId, socket.id)//store the user's socket id
     console.log(`Socket ${socket.id} (User ${userId}) joined room ${roomCode}`);
@@ -212,28 +223,37 @@ io.on('connection', (socket: Socket) => {
 // This is the CRITICAL change to break potential circular dependencies.
 export { app, io, connectedUsers, server };
 
-import authRoutes from './routes/auth';
-import roomRoutes from './routes/rooms';
-
-app.use('/api/auth', authRoutes);
-app.use('/api/rooms', roomRoutes);
-
-
 // Error Handling
-app.use((err: { stack: any; }, req: any, res: { status: (arg0: number) => { (): any; new(): any; json: { (arg0: { message: string; }): void; new(): any; }; }; }, next: any) => {
-  console.error(err.stack);
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   res.status(500).json({ message: 'Internal server error' });
 });
 
 
-/*
 // Start Server
 const startServer = async () => {
   try {
     await connectDB();
+
+    // Import routes AFTER database connection
+    const authRoutes = (await import('../src/routes/auth')).default;
+    const roomRoutes = (await import('../src/routes/rooms')).default;
+
+    // --- These are the lines we need the output for ---
+    console.log(`[Server] Type of authRoutes: ${typeof authRoutes}`);
+    console.log(`[Server] Type of roomRoutes: ${typeof roomRoutes}`);
+    // --- End of lines we need output for ---
+
+
+    // ✅ Now register the routes
+    app.use('/api/auth', authRoutes);
+    app.use('/api/rooms', roomRoutes);
+
+
     const PORT = process.env.PORT ? parseInt(process.env.PORT) : 5000;
     server.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
+      const testDebug = { msg: "Debugger should stop here!" };
+      console.log(testDebug); // ← set a BREAKPOINT on this line
       console.log(`[Server] JWT_SECRET loaded: ${!!process.env.JWT_SECRET}`);
       if (!process.env.JWT_SECRET) {
         console.error('[Server ERROR] JWT_SECRET is NOT set in environment variables!');
@@ -244,10 +264,9 @@ const startServer = async () => {
     process.exit(1);
   }
 };
-*/
-/*
+
+
 // Start if not in test environment
 if (process.env.NODE_ENV !== 'test') {
   startServer();
 }
-*/

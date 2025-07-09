@@ -83,6 +83,7 @@ router.post('/login', [
 ],
     async (req: express.Request, res: express.Response) => {
 
+    console.log('[Backend] Attempting Login for username:', req.body.username);
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array(), message: 'Validation failed.' });

@@ -1,9 +1,9 @@
 import request from 'supertest';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
-import User from '../src/models/User';
+import User from '../models/User';
 import bcrypt from 'bcryptjs';
-import app from '../src/server';
+import { app }  from '../server';
 
 //Node.js built-in test runner functions
 import { test, before, after, beforeEach, afterEach } from 'node:test';

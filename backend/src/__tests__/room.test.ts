@@ -1,9 +1,9 @@
 import request from 'supertest';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
-import app from '../src/server';
-import User from '../src/models/User';
-import Room from '../src/models/Room';
+import {app} from '../server';
+import User from '../models/User';
+import Room from '../models/Room';
 import bcrypt from 'bcryptjs';
 import { test, before, after, beforeEach } from 'node:test';
 import assert from 'node:assert';

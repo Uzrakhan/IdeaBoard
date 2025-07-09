@@ -1,17 +1,15 @@
 {
   "compilerOptions": {
-    "moduleResolution": "node",
-    "target": "ES2020",
+    "target": "es2020",
     "module": "commonjs",
     "rootDir": "./src",
     "outDir": "./dist",
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
     "strict": true,
-    "typeRoots": ["./node_modules/@types"],
-    "lib": ["ES2020","DOM"]
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "sourceMap": true,                     // ✅ very important
+    "inlineSources": true,                 // ✅ recommended
+    "skipLibCheck": true
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": ["src"]
 }
