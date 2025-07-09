@@ -1,7 +1,8 @@
 {
   "compilerOptions": {
     "types": ["node"],
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "sourceMap": true
   },
   "files": [],
   "references": [
