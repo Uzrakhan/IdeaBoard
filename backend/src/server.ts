@@ -76,23 +76,7 @@ app.post('/api/auth/test', (req: any, res: { status: (arg0: number) => { (): any
 // --- END TEMPORARY DIAGNOSTIC ROUTE ---
 */
 
-/*
-// Database Connection
-const connectDB = async () => {
-  const mongoUri = process.env.MONGO_URI;
-  if (!mongoUri) {
-    console.error('MongoDB URI is not defined.')
-    throw new Error('MongoDB URI is not defined. Set MONGODB_URI environment variable.');
-  }
-  try {
-    await mongoose.connect(mongoUri);
-    console.log('MongoDB connected...');
-  } catch (err) {
-    console.error('MongoDB connection error:', err);
-    throw err;
-  }
-};
-*/
+
 
 // LowDB Setup for Drawing Lines
 type Point = { x: number; y: number };
