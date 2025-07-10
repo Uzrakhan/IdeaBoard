@@ -76,6 +76,10 @@ app.post('/api/auth/test', (req: any, res: { status: (arg0: number) => { (): any
 // --- END TEMPORARY DIAGNOSTIC ROUTE ---
 */
 
+//TEMPORARY TEST ROUTE
+app.get('/', (req: any, res: { send: (arg0: string) => void; }) => {
+  res.send('🟢 Server is up!');
+});
 
 
 // LowDB Setup for Drawing Lines
@@ -209,6 +213,7 @@ export { app, io, connectedUsers, server };
 
 // Error Handling
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('[Express Error]', err);
   res.status(500).json({ message: 'Internal server error' });
 });
 
@@ -219,18 +224,18 @@ const startServer = async () => {
     await connectDB();
 
     // Import routes AFTER database connection
-    //const authRoutes = (await import('../src/routes/auth')).default;
-    //const roomRoutes = (await import('../src/routes/rooms')).default;
+    const authRoutes = (await import('../src/routes/auth')).default;
+    const roomRoutes = (await import('../src/routes/rooms')).default;
 
     // --- These are the lines we need the output for ---
-    //console.log(`[Server] Type of authRoutes: ${typeof authRoutes}`);
-    //console.log(`[Server] Type of roomRoutes: ${typeof roomRoutes}`);
+    console.log(`[Server] Type of authRoutes: ${typeof authRoutes}`);
+    console.log(`[Server] Type of roomRoutes: ${typeof roomRoutes}`);
     // --- End of lines we need output for ---
 
 
     // ✅ Now register the routes
-    //app.use('/api/auth', authRoutes);
-    //app.use('/api/rooms', roomRoutes);
+    app.use('/api/auth', authRoutes);
+    app.use('/api/rooms', roomRoutes);
 
 
     const PORT = process.env.PORT ? parseInt(process.env.PORT) : 5000;
