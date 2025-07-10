@@ -219,18 +219,18 @@ const startServer = async () => {
     await connectDB();
 
     // Import routes AFTER database connection
-    const authRoutes = (await import('../src/routes/auth')).default;
-    const roomRoutes = (await import('../src/routes/rooms')).default;
+    //const authRoutes = (await import('../src/routes/auth')).default;
+    //const roomRoutes = (await import('../src/routes/rooms')).default;
 
     // --- These are the lines we need the output for ---
-    console.log(`[Server] Type of authRoutes: ${typeof authRoutes}`);
-    console.log(`[Server] Type of roomRoutes: ${typeof roomRoutes}`);
+    //console.log(`[Server] Type of authRoutes: ${typeof authRoutes}`);
+    //console.log(`[Server] Type of roomRoutes: ${typeof roomRoutes}`);
     // --- End of lines we need output for ---
 
 
     // ✅ Now register the routes
-    app.use('/api/auth', authRoutes);
-    app.use('/api/rooms', roomRoutes);
+    //app.use('/api/auth', authRoutes);
+    //app.use('/api/rooms', roomRoutes);
 
 
     const PORT = process.env.PORT ? parseInt(process.env.PORT) : 5000;
