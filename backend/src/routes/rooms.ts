@@ -12,6 +12,10 @@ router.get('/', (req : any, res: any) => {
 });
 
 
+router.post('/', (req: any, res: any) => {
+  res.send('✅ Room created!');
+})
+
 // @route   POST /api/rooms
 // @desc    Create a new collaboration room
 // @access  Private
