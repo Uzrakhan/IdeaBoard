@@ -243,13 +243,11 @@ const startServer = async () => {
 
 
     // --- Import and Validate roomRoutes ---
-    /*
     try {
       const roomModule = await import('./routes/rooms');
       console.log('[DEBUG] roomModule loaded:', typeof roomModule.default);
       debugger;
 
-      
       const roomRoutes = roomModule.default;
       if (typeof roomRoutes !== 'function') {
         console.error('❌ roomRoutes is not a function. Did you export default router in rooms.ts?');
@@ -266,9 +264,7 @@ const startServer = async () => {
       console.error('❌ Failed to load/register roomRoutes:', err);
       throw err;
     }
-    */
     
-    // ✅ Now register the routes
 
     const PORT = process.env.PORT ? parseInt(process.env.PORT) : 5000;
     server.listen(PORT, () => {
