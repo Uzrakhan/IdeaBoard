@@ -17,7 +17,7 @@ process.on('uncaughtException', (err) => {
   process.exit(1);
 });
 
-
+import listEndpoints from 'express-list-endpoints';
 import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
@@ -58,8 +58,6 @@ app.use(
     optionsSuccessStatus: 200
   })
 );
-
-app.options('*', cors())
 
 app.use(express.json());
 app.use((req: { method: any; url: any; }, res: any, next: () => void) => {
@@ -222,21 +220,55 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 const startServer = async () => {
   try {
     await connectDB();
+    debugger;
 
-    // Import routes AFTER database connection
-    const authRoutes = (await import('../src/routes/auth')).default;
-    const roomRoutes = (await import('../src/routes/rooms')).default;
+    let authRoutes;
 
-    // --- These are the lines we need the output for ---
-    console.log(`[Server] Type of authRoutes: ${typeof authRoutes}`);
-    console.log(`[Server] Type of roomRoutes: ${typeof roomRoutes}`);
-    // --- End of lines we need output for ---
+    // --- Import and Validate authRoutes ---
+    try {
+      const authModule = await import('./routes/auth');
+      console.log('[DEBUG] authModule loaded:', typeof authModule.default);
+
+      authRoutes = authModule.default;
+      if (typeof authRoutes !== 'function') {
+        console.error('❌ authRoutes is not a function. Did you export default router in auth.ts?');
+        throw new Error('authRoutes must be a function (Express Router)');
+      }
+      app.use('/api/auth', authRoutes);
+      console.log('✅ authRoutes registered');
+    } catch(err) {
+      console.error('❌ Failed to load/register authRoutes:', err);
+      throw err; // This will send us to the outer catch block
+    }
 
 
+    // --- Import and Validate roomRoutes ---
+    /*
+    try {
+      const roomModule = await import('./routes/rooms');
+      console.log('[DEBUG] roomModule loaded:', typeof roomModule.default);
+      debugger;
+
+      
+      const roomRoutes = roomModule.default;
+      if (typeof roomRoutes !== 'function') {
+        console.error('❌ roomRoutes is not a function. Did you export default router in rooms.ts?');
+        throw new Error('roomRoutes must be a function (Express Router)');
+      }
+
+      console.log('🔍 typeof roomRoutes:', typeof roomRoutes); // Should be function
+      console.log('🧪 roomRoutes instanceof Function:', roomRoutes instanceof Function);
+      console.log('🧪 roomRoutes keys:', Object.keys(roomRoutes));
+
+      app.use('/api/rooms', roomRoutes);
+      console.log('✅ roomRoutes registered');
+    } catch (err) {
+      console.error('❌ Failed to load/register roomRoutes:', err);
+      throw err;
+    }
+    */
+    
     // ✅ Now register the routes
-    app.use('/api/auth', authRoutes);
-    app.use('/api/rooms', roomRoutes);
-
 
     const PORT = process.env.PORT ? parseInt(process.env.PORT) : 5000;
     server.listen(PORT, () => {
@@ -249,7 +281,13 @@ const startServer = async () => {
       }
     });
   } catch (err) {
+    debugger;
     console.error('Failed to start server:', err);
+    if (err instanceof Error) {
+      console.error('🔴 STACK TRACE:', err.stack);
+    } else {
+      console.error('🔴 NON-ERROR OBJECT:', JSON.stringify(err));
+    }
     process.exit(1);
   }
 };

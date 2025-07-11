@@ -6,10 +6,18 @@ import { createRoom, getRoom, joinRoom, updateMemberStatus } from '../controller
 
 const router = express.Router();
 
+
+router.get('/', (req : express.Request, res: express.Response) => {
+  res.send('✅ Dummy room route working!');
+});
+
+
 // @route   POST /api/rooms
 // @desc    Create a new collaboration room
 // @access  Private
-router.post('/', protect, createRoom);
+console.log('[DEBUG] protect:', typeof protect);        // should be "function"
+console.log('[DEBUG] createRoom:', typeof createRoom);  // should be "function"
+router.post('/', createRoom);
 
 // @route   GET /api/rooms/:roomCode
 // @desc    Get room details by code
@@ -26,4 +34,5 @@ router.post('/:roomCode/join', protect, joinRoom);
 // @access  Private (Owner only)
 router.put('/:roomCode/members/:memberId/status', protect, updateMemberStatus);
 
+console.log('✅ rooms.ts router created');
 export default router;
