@@ -69,7 +69,7 @@ const Whiteboard: React.FC = () => {
     if(!roomCode) return;
     getRoom(roomCode)
       .then(res => {
-        const fetchedRoom = res.data.room || res.data;
+        const fetchedRoom = res;
         setRoom(fetchedRoom)
       })
       .catch(() => setError('Room not found.'))
