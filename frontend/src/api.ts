@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_APP_API_URL;
+const API_URL = import.meta.env.VITE_APP_API_URL || 'http://localhost:5000/api';
 //const API_URL = 'http://localhost:5000/api'
 
 const api = axios.create({
@@ -27,20 +27,22 @@ api.interceptors.request.use(config => {
 
 // Helper to log errors
 const handleError = (error: any) => {
-    if (error.response) {
-    console.error('API Error:', {
+  console.error('⚠️ API Error - Full details:', error);
+  if (error.response) {
+    console.error('📡 Response error:', {
       status: error.response.status,
       data: error.response.data,
       headers: error.response.headers,
-      config: error.config // Added config to log more context
+      config: error.config
     });
-    } else if (error.request) {
-        console.error('No Response:', error.request);
-    } else {
-        console.error('Request Error:', error.message);
-    }
-  return Promise.reject(error);
-}
+  } else if (error.request) {
+    console.error('❌ No response received:', error.request);
+  } else {
+    console.error('🛠️ Request error:', error.message);
+  }
+  return Promise.reject(error); // <- not the cause, just forwarding it
+};
+
 
 export const login = (username: string, password: string) => 
     api.post(`/auth/login`, { username, password })
