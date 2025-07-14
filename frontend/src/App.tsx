@@ -130,7 +130,7 @@ const WhiteboardWrapper: React.FC<{ setCurrentRoom: React.Dispatch<React.SetStat
 
   if (loading) return <div>Loading whiteboard...</div>;
   if (error) return <div className="text-center text-red-600">Error: {error}</div>;
-  if (!room) return <div className="text-center">Room not found.</div>;
+  if (!room) return <div className="text-center">Room not found !!!!!!</div>;
 
   return <Whiteboard />;
 };
