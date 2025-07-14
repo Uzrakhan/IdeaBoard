@@ -36,8 +36,8 @@ const CreateRoom: React.FC<CreateRoomProps> = ({ onRoomCreated, setCurrentRoom }
             try {
                 const roomResponse = await getRoom(roomCode);
                 console.log('roomResponse:', roomResponse);
-                onRoomCreated(roomResponse.data); // Passes the created room data to a parent component
-                setCurrentRoom(roomResponse.data); // Pass the full room object
+                onRoomCreated(roomResponse); // Passes the created room data to a parent component
+                setCurrentRoom(roomResponse); // Pass the full room object
             } catch (err) {
                 console.error('Failed to fetch room details, but room was created', err);
                 // You might want to pass a partial room object if fetching fails
