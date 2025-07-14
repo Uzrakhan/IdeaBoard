@@ -38,8 +38,8 @@ const io = new Server(server, {
 
 
 const allowedOrigins = [
-  // 'https://idea-board-virid.vercel.app', // Uncomment and adjust for production deployment
-  'http://localhost:5173' // Corrected: NO TRAILING SLASH HERE
+  'https://idea-board-virid.vercel.app', 
+  'http://localhost:5173' 
 ];
 
 // Global Error Handlers (Recommended at the very top of your main entry file, e.g., index.ts, but here is fine for server-side
