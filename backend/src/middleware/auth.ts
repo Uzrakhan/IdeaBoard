@@ -3,18 +3,18 @@ import express from 'express'
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import User, { IUser } from '../models/User';
 
-// Extend Express Request to include authenticated user
-export interface AuthRequest extends express.Request {
-  params: { roomCode: any; };
-  body: {
-      memberId: any; status: any; 
-};
-  headers: any;
-  user?: IUser;
+// --- This is the key change: MOVE THE DECLARATION MERGING HERE ---
+declare global {
+  namespace Express {
+    interface Request {
+      user?: IUser; // Add your custom properties here
+    }
+  }
 }
+// --- End of declaration merging block ---
 
 // Middleware to protect routes
-export const protect = async (req: AuthRequest, res: express.Response, next: express.NextFunction) => {
+export const protect = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
   let token: string | undefined;
   const authHeader = req.headers.authorization;
 

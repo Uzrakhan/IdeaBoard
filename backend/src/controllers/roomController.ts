@@ -3,7 +3,6 @@ import mongoose, { Types, HydratedDocument } from 'mongoose';
 import Room, { IRoom, IPopulatedRoomMember } from '../models/Room';
 import User, { IUser } from '../models/User';
 import { io, connectedUsers } from '../server';
-import { AuthRequest } from '../middleware/auth';
 
 const generateUniqueRoomCode = async (): Promise<string> => {
     let code: string;
@@ -21,9 +20,11 @@ const generateUniqueRoomCode = async (): Promise<string> => {
     return code;
 };
 
-export const createRoom = async (req: AuthRequest, res: express.Response) => {
-    const userId = (req.user as IUser)?._id?.toString();
-    if (!userId) return res.status(401).json({ message: 'Not authenticated' });
+export const createRoom = async (req: express.Request, res: express.Response) => {
+    const userId = req.user?._id?.toString();
+    if (!userId) {
+        return res.status(401).json({ message: 'User not authenticated' });
+    }
 
     try {
         const user = await User.findById(userId);
@@ -43,14 +44,14 @@ export const createRoom = async (req: AuthRequest, res: express.Response) => {
     }
 };
 
-export const getRoom = async (req: AuthRequest, res: express.Response) => {
+export const getRoom = async (req: express.Request, res: express.Response) => {
     // --- NEW: VERY FIRST LOG IN GETROOM ---
     console.log(`[getRoom Controller - START] Request received for room: ${req.params.roomCode || 'N/A'}`);
     console.log(`[getRoom Controller - START] User ID from request: ${req.user?._id?.toString() || 'N/A'}`);
     // --- END NEW LOG ---
 
     const { roomCode } = req.params;
-    const userId = (req.user as IUser)?._id?.toString();
+    const userId = req.user?._id?.toString();
     if (!userId) return res.status(401).json({ message: 'Not authenticated' });
 
     try {
@@ -97,9 +98,9 @@ export const getRoom = async (req: AuthRequest, res: express.Response) => {
     }
 };
 
-export const joinRoom = async (req: AuthRequest, res: express.Response) => {
+export const joinRoom = async (req: express.Request, res: express.Response) => {
     const { roomCode } = req.params;
-    const userId = (req.user as IUser)?._id?.toString();
+    const userId = req.user?._id?.toString();
     if (!userId) return res.status(401).json({ message: 'Not authenticated' });
 
     try {
@@ -144,11 +145,11 @@ export const joinRoom = async (req: AuthRequest, res: express.Response) => {
     }
 };
 
-export const updateMemberStatus = async (req: AuthRequest, res: express.Response) => {
+export const updateMemberStatus = async (req: express.Request, res: express.Response) => {
     const { roomCode } = req.params;
     const memberId = req.body.memberId;
     const memberStatus = req.body.status;
-    const ownerId = (req.user as IUser)?._id?.toString();
+    const ownerId = req.user?._id?.toString();
 
     if (!ownerId) return res.status(401).json({ message: 'Not authenticated.' });
     if (!memberId) return res.status(400).json({ message: 'Member ID is required.' });

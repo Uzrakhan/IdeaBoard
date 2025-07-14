@@ -4,6 +4,9 @@
     "module": "commonjs",
     "rootDir": "./src",
     "outDir": "./dist",
+    "typeRoots": [
+      "./node_modules/@types"
+    ],
     "strict": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
@@ -11,5 +14,8 @@
     "inlineSources": true,                 // ✅ recommended
     "skipLibCheck": true
   },
-  "include": ["src"]
+  "include": [
+    "src/**/*.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
 }

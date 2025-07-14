@@ -8,7 +8,7 @@ import { body, validationResult } from 'express-validator';
 const router = express.Router();
 
 // --- TEMPORARY DIAGNOSTIC ROUTE  ---//
-router.post('/test-subroute', (req: any,res: { status: (arg0: number) => { (): any; new(): any; json: { (arg0: { message: string; }): void; new(): any; }; }; }) => {
+router.post('/test-subroute', (req: express.Request,res: express.Response) => {
     console.log('[DIAGNOSTIC AUTH ROUTER] Hit temporary /test-subroute!');
     res.status(200).json({ message: 'Auth sub-route hit successfully!' });
 })
