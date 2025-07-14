@@ -45,21 +45,45 @@ export const createRoom = async (req: express.Request, res: express.Response) =>
 };
 
 export const getRoom = async (req: express.Request, res: express.Response) => {
-    // --- NEW: VERY FIRST LOG IN GETROOM ---
-    console.log(`[getRoom Controller - START] Request received for room: ${req.params.roomCode || 'N/A'}`);
-    console.log(`[getRoom Controller - START] User ID from request: ${req.user?._id?.toString() || 'N/A'}`);
-    // --- END NEW LOG ---
-
     const { roomCode } = req.params;
     const userId = req.user?._id?.toString();
-    if (!userId) return res.status(401).json({ message: 'Not authenticated' });
+
+    // --- NEW/ENHANCED LOGGING (keep these in for debugging on Render) ---
+    console.log(`[getRoom Controller - L0] --- START getRoom Request ---`);
+    console.log(`[getRoom Controller - L0.1] Request received for room: ${roomCode || 'N/A'}`);
+    console.log(`[getRoom Controller - L0.2] User ID from request: ${userId || 'N/A'}`);
+    // --- END NEW LOG ---
+
+    if (!userId) {
+        console.warn(`[getRoom Controller - L1] Unauthorized access attempt for room ${roomCode}: No user ID.`);
+        return res.status(401).json({ message: 'Not authenticated' });
+    }
 
     try {
+        console.log(`[getRoom Controller - L2] Attempting to find room with roomCode: ${roomCode} for user ${userId}.`);
         const room = await Room.findOne({ roomCode })
             .populate<{ owner: IUser }>('owner', 'username')
-            .populate<{ members: IPopulatedRoomMember[] }>('members.user', 'username') as HydratedDocument<IRoom>;
+            .populate<{ members: IPopulatedRoomMember[] }>({
+                path: 'members.user',
+                select: 'username'
+            }) as HydratedDocument<IRoom>;
 
-        if (!room) return res.status(404).json({ message: "Room not found" });
+        // --- NEW LOG ---
+        console.log(`[getRoom Controller - L3] DB query for ${roomCode} completed.`);
+        // --- END NEW LOG ---
+
+
+        if (!room) {
+            // --- NEW LOG ---
+            console.error(`[getRoom Controller - L4] Room ${roomCode} NOT found in database.`);
+            // --- END NEW LOG ---
+            return res.status(404).json({ message: "Room not found" });
+        }
+
+        // --- NEW LOG ---
+        console.log(`[getRoom Controller - L5] Room ${roomCode} found.`);
+        // --- END NEW LOG ---
+
 
         const roomOwner = room.owner as IUser;
         const isOwner = roomOwner?._id?.toString() === userId;
@@ -68,6 +92,9 @@ export const getRoom = async (req: express.Request, res: express.Response) => {
         );
 
         if (!isApprovedMember && !isOwner) {
+            // --- NEW LOG ---
+            console.log(`[getRoom Controller - L6] User ${userId} is not owner or approved member of ${roomCode}. Returning partial room info.`);
+            // --- END NEW LOG ---
             return res.status(200).json({
                 message: 'Room found, request to join.',
                 room: {
@@ -89,11 +116,24 @@ export const getRoom = async (req: express.Request, res: express.Response) => {
             });
         }
 
+        // --- NEW LOG ---
+        console.log(`[getRoom Controller - L7] Sending full room data for ${roomCode} to user ${userId}.`);
+        // --- END NEW LOG ---
         res.status(200).json({
             ...room.toObject(),
             members: Array.isArray(room.members) ? room.members : []
         });
     } catch (err: any) {
+        // --- NEW/ENHANCED LOGGING IN CATCH BLOCK ---
+        console.error(`[getRoom Controller - L8] CATCH BLOCK: ERROR fetching room ${roomCode}. Error message:`, err.message);
+        if (err.name === 'MongooseServerSelectionError') {
+             console.error('[getRoom Controller - L9] MongoDB Server Selection Error: This usually means the server cannot connect to the MongoDB cluster. Check Atlas IP whitelist/URI.');
+        } else if (err.name === 'MongoNetworkError') {
+             console.error('[getRoom Controller - L10] MongoDB Network Error: Connection dropped or refused during query.');
+        } else {
+             console.error('[getRoom Controller - L11] General Mongoose/DB Error (full object):', err); // Log the full error object for more detail
+        }
+        // --- END NEW LOG ---
         res.status(500).json({ message: "Server error", details: err.message });
     }
 };
