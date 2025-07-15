@@ -1,6 +1,8 @@
 // App.tsx (Fixed)
 
 import React, { useState, useEffect } from 'react';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/ReactToastify.css';
 import { Routes, Route, Navigate, useParams, useNavigate, useLocation } from 'react-router-dom';
 import Auth from './components/Auth';
 import CreateRoom from './components/CreateRoom';
@@ -98,6 +100,10 @@ const App: React.FC = () => {
           />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
+        <ToastContainer position='top-right' autoClose={5000} 
+          hideProgressBar={false} closeOnClick rtl={false} 
+          pauseOnFocusLoss draggable pauseOnHover
+        />
       </div>
     </AuthProvider>
   );

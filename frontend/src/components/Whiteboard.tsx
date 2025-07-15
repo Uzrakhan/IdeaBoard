@@ -3,8 +3,9 @@ import { socket } from '../socket';
 import type { Room } from '../types';
 import { useAuth } from '../context/AuthContext';
 import RoomAdminPanel from './RoomAdminPanel';
-import { useParams } from 'react-router-dom';
+import { useParams,useNavigate } from 'react-router-dom';
 import { getRoom } from '../api';
+import { toast } from 'react-toastify';
 /*
 // Mock room data - in a real app, this would come from an API
 const mockRoom: Room = {
@@ -40,6 +41,7 @@ type DrawingLine = {
 
 const Whiteboard: React.FC = () => {
   const { roomCode } = useParams();
+  const navigate = useNavigate();
   const [room,setRoom] = useState<Room | null>(null);
   const [error,setError] = useState('');
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -64,7 +66,137 @@ const Whiteboard: React.FC = () => {
   const isOwner = currentUser && room?.owner?._id === currentUser._id;
 
   console.log('Current User from AuthContext:', currentUser);
+
+  // --- START: Room Data Fetching (FIXED) ---
+  useEffect(() => {
+    const fetchRoomDetails = async () => {
+      if (!roomCode) {
+        setError('No room code provided.');
+        // Optionally redirect if no roomCode is present
+        navigate('/');
+        return;
+      }
+      try{
+        console.log("Whiteboard: Fetching room details for:", roomCode);
+        const res = await getRoom(roomCode);
+        
+        // FIX #1: Correctly extract the room object from the response
+        if (res && res.room) {
+          setRoom(res.room); // <--- IMPORTANT FIX: Use res.room
+          console.log("Whiteboard: Room fetched successfully:", res.room);
+        } else {
+          // If room not found (e.g., status 404), your getRoom API might throw,
+          // which the catch block handles. If it returns { message: 'Room not found' }
+          // without an error, then this 'throw new Error' is good.
+          throw new Error(res.message || "Room data not found in response.");
+        }
+      } catch(err: any) {
+        console.error("Whiteboard: Failed to fetch room details:", err);
+        const errorMessage = err.response?.data?.message || "Failed to load room."
+        setError(errorMessage);
+        toast.error(errorMessage) //show toast for room loading errors
+        navigate('/'); // Redirect to home or dashboard if room not found/error
+      }
+    };
+    fetchRoomDetails();
+  },[roomCode,navigate]);
+
+
+  // --- START: Socket.IO Connection and Listeners (UPDATED) ---
+  useEffect(() => {
+    //ensure currnetUser is available before connecting
+    if (!roomCode || !currentUser) { 
+      console.log("Socket.IO: Waiting for roomCode or currentUser to connect socket.");
+      return;
+    }
+
+    //only connect if not already connected
+    if (!socket.connected) {
+      console.log("Socket.IO: Attempting to connect for room:", roomCode);
+      socket.connect()
+    }
+
+    
+    // Add general connection/disconnection logs for debugging
+    socket.on('connect', () => {
+      console.log('Socket.IO: Connected successfully! Socket ID:', socket.id);
+      //emit 'joinRoomChannel' only after connecteion is established
+      console.log(`Socket.IO: Emitting 'joinRoomChannel' for room ${roomCode} with user ${currentUser._id}`);
+      socket.emit('joinRoomChannel', { roomCode, userId: currentUser._id });
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.log('Socket.IO: Disconnected. Reason:', reason);
+      // Optionally show a toast for unexpected disconnects
+      if (reason === "io server disconnect" || reason === "io client disconnect") {
+        toast.info('Disconnected from room. Please refresh if issue persists.')
+      }else {
+        toast.error('Lost connection to the room. Attempting to reconnect...')
+      }
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('Socket.IO: Connection error:', error);
+      toast.error(`Connection error: ${error.message}`)
+    });
+
+    // Add event listeners for real-time features like join requests and member updates
+    // These events must be emitted by your backend when relevant changes occur.
+    //1. Listen for 'roomUpdated' (General Room Data Refresh)
+    socket.on('roomUpdated', ({ room: updatedRoomData }: { room: Room }) => {
+      console.log('Socket.IO: Received roomUpdated:', updatedRoomData);
+      setRoom(updatedRoomData) //update the main room state
+    });
+
+    //2. Listen for 'room:joinRequest' (For the room owner)
+    socket.on('room:joinRequest', (data: { roomCode: string; requester: string; requesterId: string }) => {
+      console.log('Socket.IO: Received new join request:', data);
+      // This will now only show for the owner, as the backend emits it to the owner's socket
+      toast.info(`New join request for room ${data.roomCode} from ${data.requester}!`);
+      // The `roomUpdated` event (handled above) will eventually bring the new member into the `room.members` array.
+      // So, the RoomAdminPanel will naturally update if it uses the `room` prop.
+    });
+
+    //3. Listen for 'memberUpdate' (for admin panel member list)
+    socket.on('room:memberUpdate', (data: { roomCode: string; memberId: string; status: string; username: string; message?: string }) => {
+      console.log('Socket.IO: Received member update:', data);
+      // This event tells you a specific member's status changed.
+      // The `roomUpdated` event (handled above) will update the `room` state which is passed to RoomAdminPanel.
+      // So, this toast is mainly for notification.
+      toast.info(data.message || `${data.username}'s status updated to ${data.status}`)
+    });
+
+    //4. Listen for 'yourRoomStatusUpdated' (for the affected user)
+    socket.on('yourRoomStatusUpdated', (data: { roomCode: string; status: string; message?: string }) => {
+      console.log(`Socket.IO: Your status in room ${data.roomCode} updated to ${data.status}.`);
+      if (data.status === "approved") {
+        toast.success(data.message || `You have been approved for room ${data.roomCode}!`)
+      } else if (data.status === "rejected") {
+        toast.error(data.message || `Your request for room ${data.roomCode} was rejected.`)
+      }
+    })
+
+    // Cleanup on component unmount
+    return () => {
+      console.log("Socket.IO: Disconnecting and cleaning up listeners.");
+      socket.off('connect');
+      socket.off('disconnect');
+      socket.off('connect_error');
+      socket.off('roomUpdated')
+      socket.off('room:joinRequest');
+      socket.off('room:memberUpdate');
+      socket.off('yourRoomStatusUpdated')
+      // It's good practice to disconnect the socket when leaving the room/component
+      // if it's specific to this room.
+      socket.disconnect();
+    };
+  }, [roomCode, currentUser]); // Dependencies: roomCode, currentUser
+
+  // --- END: Socket.IO Connection and Listeners ---
+
   
+  //REDUNDANT FETCHING CODE
+  /*
   useEffect(() => {
     if(!roomCode) return;
     getRoom(roomCode)
@@ -74,7 +206,7 @@ const Whiteboard: React.FC = () => {
       })
       .catch(() => setError('Room not found.'))
   },[roomCode]);
-  
+  */
 
   // Keep refs updated with current state
   useEffect(() => {
@@ -112,25 +244,45 @@ const Whiteboard: React.FC = () => {
 
     // Set up socket event handlers
     const handleInitialState = (lines: DrawingLine[]) => {
+      console.log("Socket.IO: Received initial-state:", lines);
       linesRef.current = lines;
       redrawCanvas();
     };
 
     const handleDraw = (line: DrawingLine) => {
       // Check if we already have this line
-      const isNewLine = !linesRef.current.some(l => 
-        l.points === line.points && 
+      console.log("Socket.IO: Received draw event:", line);
+      // Your drawing logic here needs to accurately handle if it's a new line segment or a full new line.
+      // The current logic tries to determine if it's a new line or an update.
+      // If your backend always sends the *full current line* for each segment,
+      // the `redrawCanvas()` in the else block is important.
+      // If backend sends only the *new segment*, `drawLine` is enough.
+      // Given your backend emits the `updatedLine` (full line), the `redrawCanvas` is more robust.
+
+      const existingLineIndex = linesRef.current.findIndex(l => 
         l.color === line.color && 
-        l.width === line.width
+        l.width === line.width && 
+        // This comparison might be tricky, consider adding a unique ID for lines if possible.
+        // For simplicity, we'll assume the backend sends the full updated line if an existing one is being drawn.
+        // A better approach for drawing is often to just append the new point to the last line's points.
+        // If it's a new line, add it.
+        // For simplicity with full line updates:
+        (l.points.length > 0 && line.points.length > 0 
+          && l.points[0].x === line.points[0].x && 
+          l.points[0].y === line.points[0].y
+        )
       );
       
-      if (isNewLine) {
-        linesRef.current = [...linesRef.current, line];
-        drawLine(ctx, line);
+      if (existingLineIndex !== -1) {
+        linesRef.current[existingLineIndex] = line; //replace the exsisting line with updatd one
+      }else {
+        linesRef.current = [...linesRef.current, line] // Add as a new line
+        redrawCanvas()
       }
     };
 
     const handleClear = () => {
+      console.log("Socket.IO: Received clear event.");
       linesRef.current = [];
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     };
@@ -163,7 +315,8 @@ const Whiteboard: React.FC = () => {
 
     // Redraw all lines on canvas
     const redrawCanvas = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (!canvas || !ctx) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height); //clear the scaled canvas
       linesRef.current.forEach(line => drawLine(ctx, line));
     };
 
@@ -192,7 +345,7 @@ const Whiteboard: React.FC = () => {
       
       redrawTimeoutRef.current = setTimeout(() => {
         initCanvas();
-      }, 100);
+      }, 100); // Debounce time
     };
 
     // Initial setup
@@ -239,6 +392,11 @@ const Whiteboard: React.FC = () => {
 
   // Start drawing
   const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
+    // Prevent default touch behavior (e.g., scrolling)
+    if ('touches' in e) {
+      e.preventDefault();
+    }
+
     setIsDrawing(true);
     const point = getCoordinates(e);
     lastPointRef.current = point;
@@ -250,10 +408,12 @@ const Whiteboard: React.FC = () => {
       width: brushSizeRef.current
     };
     
-    // Add to local storage and emit to server
+    // Add to local lines and emit to server
     linesRef.current = [...linesRef.current, newLine];
-    if (room) {
+    if (room && socket.connected) { // Only emit if room is loaded and socket is connected
       socket.emit('draw', newLine, room.roomCode);
+    } else {
+      console.warn("Attempted to draw but room not loaded or socket not connected.");
     }
   };
 
@@ -293,7 +453,9 @@ const Whiteboard: React.FC = () => {
         updatedLine
       ];
       
-      if (room) {
+      if (room && socket.connected) { // Only emit if room is loaded and socket is connected
+        // Emit the *updated* full line. Your backend should handle this by replacing
+        // or appending to the current state of that line in the database/memory.
         socket.emit('draw', updatedLine, room.roomCode);
       }
     }
@@ -318,8 +480,10 @@ const Whiteboard: React.FC = () => {
     }
     
     linesRef.current = [];
-    if (room) {
-      socket.emit('clear', room.roomCode);
+    if (room && socket.connected) { // Only emit if room is loaded and socket is connected
+      socket.emit('clear', room.roomCode); // Notify server to clear for everyone
+    } else {
+      console.warn("Attempted to clear board but room not loaded or socket not connected.");
     }
   };
 
@@ -336,12 +500,11 @@ const Whiteboard: React.FC = () => {
 
   console.log("Whiteboard received room:", room);
   if (!room) {
-    return <div className="text-center mt-10 text-gray-600">
-            Loading Room...
-          </div>;
+    if (error) {
+      return <div className="text-center mt-10 text-red-600">{error}</div>;
+    }
+    return <div className="text-center mt-10 text-gray-600">Loading Room...</div>;
   }
-
-  if (error) return <div className="text-center mt-10 text-red-600">{error}</div>;
 
 
   return (
