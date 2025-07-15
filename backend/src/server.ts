@@ -15,7 +15,10 @@ console.log('🔵 server.ts is starting...');
 
 const app = express();
 const server = createServer(app);
-
+const allowedOrigins = [
+  'https://idea-board-virid.vercel.app', 
+  'http://localhost:5173' 
+];
 // --- CRITICAL REORDERING FOR CIRCULAR DEPENDENCY ---
 // Define connectedUsers and io immediately after app and server are created.
 // This ensures they are fully initialized when other modules (like roomController)
@@ -24,7 +27,7 @@ const connectedUsers = new Map<string, string>(); // userId -> socketId
 
 const io = new Server(server, {
   cors: {
-    origin: ['http://localhost:5173'], // Corrected: NO TRAILING SLASH HERE
+    origin: allowedOrigins,
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -36,11 +39,6 @@ const io = new Server(server, {
 });
 // --- END CRITICAL REORDERING ---
 
-
-const allowedOrigins = [
-  'https://idea-board-virid.vercel.app', 
-  'http://localhost:5173' 
-];
 
 // Global Error Handlers (Recommended at the very top of your main entry file, e.g., index.ts, but here is fine for server-side
 // unhandled rejections/exceptions that happen outside Express middleware)
