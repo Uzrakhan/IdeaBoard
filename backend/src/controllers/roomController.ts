@@ -151,7 +151,7 @@ export const joinRoom = async (req: express.Request, res: express.Response) => {
         if (existingMember) {
             return res.status(200).json({
                 message: existingMember.status === 'approved' ? 'Already a member.' : 'Join request pending.',
-                room
+                room // return the existing 
             });
         }
 
@@ -166,29 +166,37 @@ export const joinRoom = async (req: express.Request, res: express.Response) => {
             m => (m.user as IUser)?._id?.toString() === userId
         );
         const requesterUsername = (newPendingMember?.user as IUser)?.username || 'Unknown User';
+        const requesterId = (newPendingMember?.user as IUser)?.id?.toString();
 
         const owner = populatedRoom.owner as IUser;
         const ownerSocketId = connectedUsers.get(((owner as IUser)?._id as Types.ObjectId)?.toString());
 
+                // 🚀 Emit 'room:joinRequest' to the owner
+
         if (ownerSocketId) {
-            io.to(ownerSocketId).emit('newJoinRequest', {
+            io.to(ownerSocketId).emit('room:joinRequest', {
                 roomCode: room.roomCode,
                 requester: requesterUsername,
-                requesterId: userId
+                requesterId: requesterId
             });
+            console.log(`[Socket.IO] Emitted 'room:joinRequest' to owner ${owner._id} for room ${roomCode}`);
+        }else {
+            console.warn(`[Socket.IO] Owner ${owner._id} not connected, could not send 'room:joinRequest' for room ${roomCode}.`);
         }
 
+        // 🚀 Emit 'roomUpdated' to everyone in the room (including the requester if connected)
         io.to(roomCode).emit('roomUpdated', { room: populatedRoom });
+        console.log(`[Socket.IO] Emitted 'roomUpdated' to room ${roomCode} after join request.`);
         res.status(200).json({ message: 'Join request sent', room: populatedRoom });
     } catch (err: any) {
+        console.error(`[joinRoom Controller] Error: ${err.message}`);
         res.status(500).json({ message: 'Server error', details: err.message });
     }
 };
 
 export const updateMemberStatus = async (req: express.Request, res: express.Response) => {
     const { roomCode } = req.params;
-    const memberId = req.body.memberId;
-    const memberStatus = req.body.status;
+    const { memberId, status: memberStatus } = req.body;
     const ownerId = req.user?._id?.toString();
 
     if (!ownerId) return res.status(401).json({ message: 'Not authenticated.' });
@@ -216,29 +224,39 @@ export const updateMemberStatus = async (req: express.Request, res: express.Resp
         const updatedMember = populatedRoom.members.find(
             m => (m.user as IUser)?._id?.toString() === memberId
         );
-        const updatedUser = (updatedMember?.user as IUser)?.username || 'A user';
+        const updatedUserUsername = (updatedMember?.user as IUser)?.username || 'A user';
+        const updatedUserId = (updatedMember?.user as IUser)?._id?.toString();
 
-        const ownerSocketId = connectedUsers.get(((populatedRoom.owner as IUser)?._id as Types.ObjectId)?.toString());
-        if (ownerSocketId) {
-            io.to(ownerSocketId).emit('memberStatusUpdated', {
-                roomCode: room.roomCode,
-                memberId,
-                status: memberStatus,
-                message: `${updatedUser}'s status updated to ${memberStatus}.`
-            });
-        }
-
-        const memberSocketId = connectedUsers.get(memberId);
+        // 🚀 Emit a private notification to the affected member (if they are connected)
+        const memberSocketId = connectedUsers.get(memberId); // Get the socket ID of the affected member
         if (memberSocketId) {
             io.to(memberSocketId).emit('yourRoomStatusUpdated', {
                 roomCode: room.roomCode,
-                status: memberStatus
+                status: memberStatus,
+                message: `Your status in room ${room.roomCode} has been ${memberStatus}.`
             });
+            console.log(`[Socket.IO] Emitted 'yourRoomStatusUpdated' to member ${memberId} for room ${roomCode}. Status: ${memberStatus}`);
         }
 
+        // 🚀 BROADCAST: Emit 'room:memberUpdate' to everyone in the room (including other admins and the owner)
+        // This is what the RoomAdminPanel on the client should primarily react to for member list updates.
+        io.to(roomCode).emit('room:memberUpdate', { 
+            roomCode: room.roomCode,
+            memberId: updatedUserId,
+            status: memberStatus,
+            username: updatedUserUsername,
+            message: `${updatedUserUsername}'s status updated to ${memberStatus}. `
+        });
+        console.log(`[Socket.IO] Emitted 'room:memberUpdate' to room ${roomCode} for member ${updatedUserId} status change to ${memberStatus}.`);
+
+        // 🚀 BROADCAST: Emit 'roomUpdated' to everyone in the room with the full room object
+        // This is a general update that can be used by any part of the client needing the latest room data.
         io.to(roomCode).emit('roomUpdated', { room: populatedRoom });
+        console.log(`[Socket.IO] Emitted 'roomUpdated' to room ${roomCode} with full room data.`);
+
         res.status(200).json({ message: `Member status updated to ${memberStatus}.`, room: populatedRoom });
     } catch (err: any) {
+        console.error(`[updateMemberStatus Controller] Error: ${err.message}`);
         res.status(500).json({ message: 'Server error', details: err.message });
     }
 };

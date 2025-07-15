@@ -4,6 +4,7 @@ import {  protect } from '../middleware/auth'; // Assuming 'protect' middleware 
 import asyncHandler from 'express-async-handler';
 // Import your controller functions - Ensure these functions themselves accept (req, res)
 import { createRoom, getRoom, joinRoom, updateMemberStatus } from '../controllers/roomController';
+import { io,connectedUsers } from '../server';
 
 const router = express.Router();
 

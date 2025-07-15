@@ -100,62 +100,108 @@ type DrawingLine = {
   color: string;
   width: number;
 };
-type Data = { drawingLines: DrawingLine[] };
 
-const adapter = new JSONFile<Data>('db.json');
-const db = new Low(adapter, { drawingLines: [] });
+// Define the overall LowDB data structure
+type RoomData = {
+  drawingLines: DrawingLine [];   // Each room will have its own list of lines
+}
 
-let drawingLines: DrawingLine[] = [];
+type DbData = { 
+  rooms: { [roomCode: string]: RoomData } // The main database structure: an object mapping room codes to
+};
+
+const adapter = new JSONFile<DbData>('db.json');
+const db = new Low(adapter, { rooms: {} }); // Initialize with an empty rooms object
+
+
 
 // Initialize LowDB
 (async () => {
   await db.read();
-  db.data ||= { drawingLines: [] };
-  drawingLines = db.data.drawingLines;
+  // If 'db.json' is empty or malformed, make sure 'db.data.rooms' exists
+  db.data ||= { rooms: {} };
+  console.log('LowDB initialized. Current rooms in DB:', Object.keys(db.data.rooms).length);
 })();
 
+
+// HELPER FUNCTION: Get data for a specific room. If room doesn't exist, create an empty one.
+async function getRoomData(roomCode: string): Promise<RoomData> {
+  await db.read(); //always read the latest state from the file first!
+  if (!db.data!.rooms[roomCode]) {
+    db.data!.rooms[roomCode] = { drawingLines: [] } //create an empty room if it's new  
+  }
+  return db.data!.rooms[roomCode] //return data for this specific room
+}
+
+//HELPER FUNCTION: Save data for a specific room
+async function saveRoomData(roomCode:string, data: RoomData) {
+  await db.read(); //read the latest state before writing to prevent overwrititng other rooms
+  db.data!.rooms[roomCode] = data; //update only this room's data
+  await db.write(); //write changes back to db.json
+}
 
 // Socket.io Handlers (now comes after io is defined)
 io.on('connection', (socket: Socket) => { // 'socket' here will infer type correctly from 'socket.io'
   console.log('New client connected:', socket.id);
 
-  socket.on('joinRoom', (roomCode: string, userId: string) => {
+  //1. `joinRoom` (Change name to `joinRoomChannel` for client match)
+  socket.on('joinRoomChannel', async (data : { roomCode: string; userId: string }) => {
+    const { roomCode, userId } = data;
+
     if (typeof roomCode !== 'string' || roomCode.length > 20) {
+      console.warn(`Invalid roomCode receieved for joinRoomChannel: ${roomCode}`)
       return socket.disconnect(true);
     }
-    socket.join(roomCode);
-    connectedUsers.set(userId, socket.id);
+    socket.join(roomCode); //add this socket to the Socket.IO room group
+    connectedUsers.set(userId, socket.id); //track user to socket mapping
     console.log(`Socket ${socket.id} (User ${userId}) joined room ${roomCode}`);
+
+    //IMPORTANT: Send initial-state for THIS specific room only
+    try{
+      const roomData = await getRoomData(roomCode);
+      socket.emit('initial-state', roomData.drawingLines); //send only THIS room's lines to the joining client
+      console.log(`Sent initial-state (${roomData.drawingLines.length} lines) to ${socket.id} for room ${roomCode}`);
+    }catch (error) {
+      console.error(`Error sending initial-state for room ${roomCode}:`, error);
+    }
   });
 
+  //2. `draw` event
   socket.on('draw', async(line: DrawingLine, roomCode: string) => {
-    const existingLineIndex = drawingLines.findIndex(l =>
-      l.points[0].x === line.points[0].x && l.points[0].y === line.points[0].y &&
-      l.color === line.color && l.color === line.color && l.width === line.width // Fixed: duplicate line.color
-    );
-    if(existingLineIndex > -1) {
-      drawingLines[existingLineIndex] = line;
-    } else {
-      drawingLines.push(line);
-    }
-
     try{
-      db.data!.drawingLines = drawingLines;
-      await db.write();
-      io.to(roomCode).emit('draw',line);
-    } catch(err) {
-      console.error('DB write error (draw):', err);
+      const roomData = getRoomData(roomCode);
+      const currentDrawingLines = (await roomData).drawingLines;
+
+      // Logic to find and update/add the line in THIS room's drawingLines
+      // (This specific findIndex approach can be improved with a unique `lineId` from client)
+      const existingLineIndex = currentDrawingLines.findIndex(l =>
+          l.color === line.color &&
+          l.width === line.width &&
+          l.points[0].x === line.points[0].x &&
+          l.points[0].y === line.points[0].y
+      );
+      if(existingLineIndex > -1) {
+        currentDrawingLines[existingLineIndex] = line;
+      } else {
+        currentDrawingLines.push(line);
+      }
+
+      await saveRoomData(roomCode, await roomData);
+      io.to(roomCode).emit('draw', line);
+    }catch (err) {
+      console.error('DB write error (draw) for room', roomCode, ':', err);
     }
   });
 
+  //3. `clear` event
   socket.on('clear', async (roomCode: string) => {
-    drawingLines = [];
     try{
-      db.data!.drawingLines = [];
-      await db.write();
+      const roomData = await getRoomData(roomCode);
+      roomData.drawingLines = [];
+      await saveRoomData(roomCode, roomData);
       io.to(roomCode).emit('clear');
-    } catch(err) {
-      console.error('DB write error (clear):', err);
+    }catch(err) {
+      console.error('DB write error (clear) for room', roomCode, ":", err)
     }
   });
 
