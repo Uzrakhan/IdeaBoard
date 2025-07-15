@@ -82,7 +82,7 @@ const Whiteboard: React.FC = () => {
         const res = await getRoom(roomCode);
         
         // FIX #1: Correctly extract the room object from the response
-        if (res && res.room) {
+        if (res) {
           setRoom(res.room); // <--- IMPORTANT FIX: Use res.room
           console.log("DEBUG: Whiteboard: Room fetched successfully:", res.room); // <-- ADD THIS
         } else {
