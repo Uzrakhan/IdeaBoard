@@ -122,9 +122,9 @@ const WhiteboardWrapper: React.FC<{ setCurrentRoom: React.Dispatch<React.SetStat
       try {
         const data = await getRoom(roomCode);
         // Add a safety check for the 'room' property itself
-        if(!data || !data.room) throw new Error('Room data not found in response.');
-        setRoom(data.room);
-        setCurrentRoom(data.room);
+        if(!data) throw new Error('Room data not found in response.');
+        setRoom(data);
+        setCurrentRoom(data);
       } catch (err: any) {
         setError(err.response?.data?.message || 'Failed to load room');
         navigate('/');
@@ -169,9 +169,9 @@ const JoinRoomWrapper: React.FC<{
       try {
         const data = await getRoom(roomCode);
         // Add a safety check for the 'room' property itself
-        if(!data || !data.room) throw new Error('Room data not found in response');
-        setCurrentRoom(data.room);
-        const isApproved = data.room.members?.some(
+        if(!data) throw new Error('Room data not found in response');
+        setCurrentRoom(data);
+        const isApproved = data.members?.some(
           (m: any) => m?.user?._id?.toString() === userId && m.status === 'approved'
         );
         if (isApproved) navigate(`/room/${roomCode}`);
@@ -183,7 +183,7 @@ const JoinRoomWrapper: React.FC<{
       }
     };
     fetchRoom();
-  }, [roomCode, userId]);
+  }, [roomCode, userId, currentRoom, navigate, setCurrentRoom]);
 
   if (isLoading) return <div>Loading room...</div>;
   if (error) return <div className="error">{error}</div>;
