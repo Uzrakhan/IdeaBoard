@@ -74,16 +74,17 @@ const Whiteboard: React.FC = () => {
         setError('No room code provided.');
         // Optionally redirect if no roomCode is present
         navigate('/');
+        console.error("DEBUG: No roomCode found in URL. Redirecting.");
         return;
       }
       try{
-        console.log("Whiteboard: Fetching room details for:", roomCode);
+        console.log("DEBUG: Whiteboard: Attempting to fetch room details for:", roomCode);
         const res = await getRoom(roomCode);
         
         // FIX #1: Correctly extract the room object from the response
         if (res && res.room) {
           setRoom(res.room); // <--- IMPORTANT FIX: Use res.room
-          console.log("Whiteboard: Room fetched successfully:", res.room);
+          console.log("DEBUG: Whiteboard: Room fetched successfully:", res.room); // <-- ADD THIS
         } else {
           // If room not found (e.g., status 404), your getRoom API might throw,
           // which the catch block handles. If it returns { message: 'Room not found' }
@@ -91,11 +92,12 @@ const Whiteboard: React.FC = () => {
           throw new Error(res.message || "Room data not found in response.");
         }
       } catch(err: any) {
-        console.error("Whiteboard: Failed to fetch room details:", err);
+        console.error("DEBUG: Whiteboard: Failed to fetch room details due to an error:", err); // <-- ADD THIS
         const errorMessage = err.response?.data?.message || "Failed to load room."
         setError(errorMessage);
         toast.error(errorMessage) //show toast for room loading errors
         navigate('/'); // Redirect to home or dashboard if room not found/error
+        console.error("DEBUG: Whiteboard: Redirecting to homepage due to fetch error."); 
       }
     };
     fetchRoomDetails();
