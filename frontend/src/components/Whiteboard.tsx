@@ -83,7 +83,7 @@ const Whiteboard: React.FC = () => {
         
         // FIX #1: Correctly extract the room object from the response
         if (res) {
-          setRoom(res.room); // <--- IMPORTANT FIX: Use res.room
+          setRoom(res); // <--- IMPORTANT FIX: Use res.room
           console.log("DEBUG: Whiteboard: Room fetched successfully:", res.room); // <-- ADD THIS
         } else {
           // If room not found (e.g., status 404), your getRoom API might throw,
