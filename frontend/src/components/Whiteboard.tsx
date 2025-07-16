@@ -34,6 +34,7 @@ interface WhiteboardProps {
 
 type Point = { x: number; y: number };
 type DrawingLine = {
+  id: string; //newly added for drawing
   points: Point[];
   color: string;
   width: number;
@@ -261,6 +262,7 @@ const Whiteboard: React.FC = () => {
       // If backend sends only the *new segment*, `drawLine` is enough.
       // Given your backend emits the `updatedLine` (full line), the `redrawCanvas` is more robust.
 
+      /*
       const existingLineIndex = linesRef.current.findIndex(l => 
         l.color === line.color && 
         l.width === line.width && 
@@ -281,6 +283,15 @@ const Whiteboard: React.FC = () => {
         linesRef.current = [...linesRef.current, line] // Add as a new line
         redrawCanvas()
       }
+      */
+    const existingLineIndex = linesRef.current.findIndex(l => l.id === line.id);
+
+    if(existingLineIndex !== -1){
+      linesRef.current[existingLineIndex] = line;
+    }else{
+      linesRef.current = [...linesRef.current, line];
+    }
+    redrawCanvas()
     };
 
     const handleClear = () => {
@@ -405,6 +416,7 @@ const Whiteboard: React.FC = () => {
 
     // Create new line
     const newLine: DrawingLine = {
+      id: Date.now().toString() + Math.random().toString(36).substring(2,9), //creates a unique string
       points: [point],
       color: colorRef.current,
       width: brushSizeRef.current
