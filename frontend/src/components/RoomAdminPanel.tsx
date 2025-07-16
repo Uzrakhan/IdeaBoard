@@ -1,5 +1,5 @@
 import React from 'react';
-import { getRoom, updateRoomMemberStatus } from '../api';
+import {  updateRoomMemberStatus } from '../api';
 import type { Room } from '../types';
 
 interface RoomAdminPanelProps {
@@ -7,22 +7,17 @@ interface RoomAdminPanelProps {
     setCurrentRoom: React.Dispatch<React.SetStateAction<Room | null>>;
 }
 
-const RoomAdminPanel: React.FC<RoomAdminPanelProps> = ({ room, setCurrentRoom }) => {
+const RoomAdminPanel: React.FC<RoomAdminPanelProps> = ({ room }) => {
     const pendingRequests = room.members.filter(m => m.status === 'pending');
 
     const handleRequest = async (userId: string, status: 'approved' | 'rejected') => {
         try {
+            // This API call updates the backend.
+            // The backend should then emit a 'roomUpdated' socket event.
             await updateRoomMemberStatus(room.roomCode, userId, status);
-
-            // 🔁 Re-fetch fresh room from server
-            const response = await getRoom(room.roomCode);
-            // FIX: setCurrentRoom with the 'response' directly,
-            // as 'getRoom' already returns the Room object, not { data: Room }.
-            if (response) {
-                setCurrentRoom(response)
-            }else {
-                console.error("DEBUG: RoomAdminPanel: getRoom did not return a valid room object after update.");
-            }
+            // No need to setCurrentRoom here. The socket.on('roomUpdated') in Whiteboard.tsx
+            // will handle the state update when the backend emits it.
+            //Hence deleted it.
         } catch (error) {
             console.error('Failed to handle request', error);
         }
