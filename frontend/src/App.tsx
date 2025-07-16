@@ -120,12 +120,13 @@ const WhiteboardWrapper: React.FC<{ setCurrentRoom: React.Dispatch<React.SetStat
     const fetchRoomDetails = async () => {
       if (!roomCode) return;
       try {
-        const data = await getRoom(roomCode);
+        const response = await getRoom(roomCode);
         // Add a safety check for the 'room' property itself
-        if(!data) throw new Error('Room data not found in response.');
-        setRoom(data);
-        setCurrentRoom(data);
+        if(!response || !response.room) throw new Error('Room data not found in response.');
+        setRoom(response.room);
+        setCurrentRoom(response.room);
       } catch (err: any) {
+        console.error("DEBUG: Error fetching room in WhiteboardWrapper:", err);
         setError(err.response?.data?.message || 'Failed to load room');
         navigate('/');
       } finally {
@@ -167,15 +168,16 @@ const JoinRoomWrapper: React.FC<{
       }
 
       try {
-        const data = await getRoom(roomCode);
+        const response = await getRoom(roomCode);
         // Add a safety check for the 'room' property itself
-        if(!data) throw new Error('Room data not found in response');
-        setCurrentRoom(data);
-        const isApproved = data.members?.some(
+        if(!response || !response.room) throw new Error('Room data not found in response');
+        setCurrentRoom(response.room);
+        const isApproved = response.room.members?.some(
           (m: any) => m?.user?._id?.toString() === userId && m.status === 'approved'
         );
         if (isApproved) navigate(`/room/${roomCode}`);
-      } catch (err: any) {
+      } catch (err: any) {        
+        console.error("DEBUG: Error fetching room in JoinRoomWrapper:", err);
         setError(err.response?.data?.message || 'Failed to load room');
         navigate('/');
       } finally {
