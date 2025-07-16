@@ -91,7 +91,7 @@ const App: React.FC = () => {
             element={
               isAuthenticated ? (
                 <Layout>
-                  <WhiteboardWrapper setCurrentRoom={setCurrentRoom} />
+                  <WhiteboardWrapper />
                 </Layout>
               ) : (
                 <Navigate to="/" />
@@ -109,7 +109,7 @@ const App: React.FC = () => {
   );
 };
 
-const WhiteboardWrapper: React.FC<{ setCurrentRoom: React.Dispatch<React.SetStateAction<Room | null>> }> = ({ setCurrentRoom }) => {
+const WhiteboardWrapper: React.FC= () => {
   const { roomCode } = useParams<{ roomCode: string }>();
   const navigate = useNavigate();
   const [room, setRoom] = useState<Room | null>(null);
@@ -124,7 +124,6 @@ const WhiteboardWrapper: React.FC<{ setCurrentRoom: React.Dispatch<React.SetStat
         // Add a safety check for the 'room' property itself
         if(!responseData) throw new Error('Room data not found in response.');
         setRoom(responseData);
-        setCurrentRoom(responseData);
       } catch (err: any) {
         console.error("DEBUG: Error fetching room in WhiteboardWrapper:", err);
         setError(err.response?.data?.message || 'Failed to load room');
@@ -134,7 +133,7 @@ const WhiteboardWrapper: React.FC<{ setCurrentRoom: React.Dispatch<React.SetStat
       }
     };
     fetchRoomDetails();
-  }, [roomCode, navigate, setCurrentRoom]);
+  }, [roomCode, navigate]);
 
   if (loading) return <div>Loading whiteboard...</div>;
   if (error) return <div className="text-center text-red-600">Error: {error}</div>;
