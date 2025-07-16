@@ -122,9 +122,9 @@ const WhiteboardWrapper: React.FC<{ setCurrentRoom: React.Dispatch<React.SetStat
       try {
         const response = await getRoom(roomCode);
         // Add a safety check for the 'room' property itself
-        if(!response || !response.room) throw new Error('Room data not found in response.');
-        setRoom(response.room);
-        setCurrentRoom(response.room);
+        if(!response) throw new Error('Room data not found in response.');
+        setRoom(response);
+        setCurrentRoom(response);
       } catch (err: any) {
         console.error("DEBUG: Error fetching room in WhiteboardWrapper:", err);
         setError(err.response?.data?.message || 'Failed to load room');
