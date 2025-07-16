@@ -16,7 +16,13 @@ const RoomAdminPanel: React.FC<RoomAdminPanelProps> = ({ room, setCurrentRoom })
 
             // 🔁 Re-fetch fresh room from server
             const response = await getRoom(room.roomCode);
-            setCurrentRoom(response.data)
+            // FIX: setCurrentRoom with the 'response' directly,
+            // as 'getRoom' already returns the Room object, not { data: Room }.
+            if (response) {
+                setCurrentRoom(response)
+            }else {
+                console.error("DEBUG: RoomAdminPanel: getRoom did not return a valid room object after update.");
+            }
         } catch (error) {
             console.error('Failed to handle request', error);
         }
