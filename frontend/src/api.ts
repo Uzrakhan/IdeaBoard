@@ -79,7 +79,19 @@ export const joinRoom = (roomCode: string) =>
 export const getRoom = async (roomCode: string) => {
   try {
     const res = await api.get(`/rooms/${roomCode}`);
-    return res.data;
+
+    // Check if the response data contains a 'room' property (for unapproved/pending users)
+    // or if it's the room object directly (for owner/approved users).
+    if (res.data && res.data.room) {
+      console.log("[getRoom API] Detected nested 'room' object, returning res.data.room");
+      return res.data.room ; //return the nested room object
+    }else if (res.data) {
+      console.log("[getRoom API] Detected direct room object, returning res.data");
+      return res.data; // Return the direct room object
+    }else {
+      console.warn("[getRoom API] Unexpected empty response from /rooms/:roomCode");
+      throw new Error("Empty response when fetching room details.");
+    }
   } catch (error) {
     handleError(error);
     throw error;
