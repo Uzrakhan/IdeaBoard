@@ -82,14 +82,14 @@ const Whiteboard: React.FC = () => {
         const res = await getRoom(roomCode);
         
         // FIX #1: Correctly extract the room object from the response
-        if (res) {
-          setRoom(res); 
-          console.log("DEBUG: Whiteboard: Room fetched successfully:", res); // <-- ADD THIS
+        if (res && res.room) {
+          setRoom(res.room); 
+          console.log("DEBUG: Whiteboard: Room fetched successfully:", res.room); 
         } else {
           // If room not found (e.g., status 404), your getRoom API might throw,
           // which the catch block handles. If it returns { message: 'Room not found' }
           // without an error, then this 'throw new Error' is good.
-          throw new Error(res.message || "Room data not found in response.");
+          throw new Error(res?.message || "Room data not found in response.");
         }
       } catch(err: any) {
         console.error("DEBUG: Whiteboard: Failed to fetch room details due to an error:", err); // <-- ADD THIS
