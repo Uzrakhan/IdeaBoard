@@ -91,6 +91,7 @@ export const updateRoomMemberStatus = (
     memberId: string,
     status: 'approved' | 'rejected'
 ) => 
-    api.put(`/rooms/${roomCode}/members/${memberId}/status`, { status }).catch(handleError)
+   //ADDED memberId to request body
+    api.put(`/rooms/${roomCode}/members/${memberId}/status`, { memberId ,status }).catch(handleError)
 
 
