@@ -67,6 +67,16 @@ const CreateRoom: React.FC<CreateRoomProps> = ({ onRoomCreated, setCurrentRoom }
         }
     }
 
+    //function to generate the mailto Link
+    const generateMailtoLink = () => {
+        const subject = encodeURIComponent('Join my collaboratiion room on IdeaBoard!');
+        const body = encodeURIComponent(
+            `Hey!%0A%0A` + //two lines after Hey
+            `Come join my collaboration room on IdeaBoard. Click the link to get started:%0A` + // Newline after "started:"
+            `${roomLink}`
+        );
+        return `mailto:?subject=${subject}&body=${body}`;
+    }
     return (
         <div className='max-w-4xl mx-auto px-4 py-8 font-inter'> {/* Added font-inter */}
                 <div className='bg-white rounded-xl shadow-lg p-6 md:p-8'> {/* Changed shadow-md to shadow-lg */}
@@ -129,7 +139,7 @@ const CreateRoom: React.FC<CreateRoomProps> = ({ onRoomCreated, setCurrentRoom }
                                             <i className="fab fa-facebook mr-2"></i> Facebook
                                         </a>
                                         <a
-                                            href={`mailto:?subject=Join%20my%20collaboration%20room%20on%20IdeaBoard!&body=Hey!%0A%0ACome%20join%20my%20collaboration%20room%20on%20IdeaBoard.%20Click%20the%20link%20to%20get%20started:%0A${encodeURIComponent(roomLink)}`}
+                                            href={generateMailtoLink()}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md flex items-center shadow-sm transition-colors duration-200"
