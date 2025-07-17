@@ -240,7 +240,11 @@ const Whiteboard: React.FC = () => {
   // Initialize canvas and set up event listeners
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || !room || !socket.connected) {
+      // Wait until canvas is ready, room is loaded, and socket is connected
+      console.log("DEBUG: Waiting to initialize canvas/drawing listeners. Canvas:", !!canvas, "Room:", !!room, "Socket Connected:", socket.connected);
+      return;
+    }
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -378,7 +382,7 @@ const Whiteboard: React.FC = () => {
       socket.off('clear', handleClear);
       if (redrawTimeoutRef.current) clearTimeout(redrawTimeoutRef.current);
     };
-  }, []);
+  }, [socket, room]);
 
 
   // Get coordinates relative to canvas
