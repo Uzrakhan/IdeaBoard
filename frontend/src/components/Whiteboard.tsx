@@ -288,14 +288,27 @@ const Whiteboard: React.FC = () => {
         redrawCanvas()
       }
       */
+    // --- NEW LOGS START HERE ---
+    console.log("--- FRONTEND: Received remote draw event! ---");
+    console.log("Received line ID:", line.id);
+    console.log("Received line color:", line.color);
+    console.log("Received line width:", line.width);
+    console.log("Received line points count:", line.points.length);
+    // --- NEW LOGS END HERE ---
+
     const existingLineIndex = linesRef.current.findIndex(l => l.id === line.id);
 
     if(existingLineIndex !== -1){
       linesRef.current[existingLineIndex] = line;
+      console.log("--- FRONTEND: Updated existing line in linesRef.current. ---");
     }else{
       linesRef.current = [...linesRef.current, line];
+      console.log("--- FRONTEND: Added new line to linesRef.current. ---");
     }
-    redrawCanvas()
+
+    console.log("--- FRONTEND: Total lines in linesRef.current after update:", linesRef.current.length);
+    redrawCanvas();
+    console.log("--- FRONTEND: Called redrawCanvas from handleDraw. ---");
     };
 
     const handleClear = () => {
@@ -332,26 +345,51 @@ const Whiteboard: React.FC = () => {
 
     // Redraw all lines on canvas
     const redrawCanvas = () => {
-      if (!canvas || !ctx) return;
+      if (!canvas || !ctx) {
+        console.warn("--- CANVAS: redrawCanvas: Canvas or context not available. ---");
+        return;
+      }
       ctx.clearRect(0, 0, canvas.width, canvas.height); //clear the scaled canvas
-      linesRef.current.forEach(line => drawLine(ctx, line));
+      console.log("--- CANVAS: redrawCanvas: Canvas cleared. ---");
+      console.log(`--- CANVAS: redrawCanvas: Attempting to draw ${linesRef.current.length} lines. ---`);
+      linesRef.current.forEach((line, index) => {
+        // --- NEW LOGS START HERE ---
+        console.log(`--- CANVAS: redrawCanvas: Drawing line ${index + 1}/${linesRef.current.length} (ID: ${line.id}, Points: ${line.points.length}) ---`);
+        // --- NEW LOGS END HERE ---
+        drawLine(ctx, line);
+      });
+      console.log("--- CANVAS: redrawCanvas: Finished redrawing all lines. ---");
     };
 
     //Draw a line on the canvas
     const drawLine = (ctx: CanvasRenderingContext2D, line: DrawingLine) => {
-      if (line.points.length === 0) return;
-      
+      if (line.points.length === 0) {
+        // --- NEW LOGS START HERE ---
+        console.warn(`--- DRAWLINE: Line ID ${line.id} has no points, skipping draw. ---`);
+        // --- NEW LOGS END HERE ---
+        return;
+      }
+
+      if (line.points.length < 2) { 
+        // --- NEW LOGS START HERE ---
+        console.warn(`--- DRAWLINE: Line ID ${line.id} has less than 2 points (${line.points.length}), might not draw visible line. ---`);
+        // --- NEW LOGS END HERE ---
+      }
+
       ctx.beginPath();
       ctx.lineWidth = line.width;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.strokeStyle = line.color;
 
+      console.log(`--- DRAWLINE: Setting style for line ${line.id}: Color=${line.color}, Width=${line.width} ---`);
+
       ctx.moveTo(line.points[0].x, line.points[0].y);
       for (let i = 1; i < line.points.length; i++) {
         ctx.lineTo(line.points[i].x, line.points[i].y);
       }
       ctx.stroke();
+      console.log(`--- DRAWLINE: Line ${line.id} stroke completed. ---`);
     };
 
     // Handle window resize with debounce
@@ -409,6 +447,7 @@ const Whiteboard: React.FC = () => {
 
   // Start drawing
   const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
+    console.log('*** EVENT: startDrawing triggered! ***', e.type); // ADD THIS
     // Prevent default touch behavior (e.g., scrolling)
     if ('touches' in e) {
       e.preventDefault();
@@ -438,7 +477,9 @@ const Whiteboard: React.FC = () => {
   // Draw while moving
   const draw = (e: React.MouseEvent | React.TouchEvent) => {
     if (!isDrawing || !lastPointRef.current) return;
-    
+
+    console.log('*** EVENT: draw (mousemove/touchmove) triggered! ***', e.type); // ADD THIS
+
     const canvas = canvasRef.current;
     if (!canvas) return;
     
@@ -456,7 +497,9 @@ const Whiteboard: React.FC = () => {
     ctx.moveTo(lastPointRef.current.x, lastPointRef.current.y);
     ctx.lineTo(point.x, point.y);
     ctx.stroke();
-    
+    console.log('*** CANVAS: Local drawing stroke performed! ***'); // ADD THIS
+
+
     // Add to last line
     if (linesRef.current.length > 0) {
       const lastLine = linesRef.current[linesRef.current.length - 1];
@@ -475,6 +518,7 @@ const Whiteboard: React.FC = () => {
         // Emit the *updated* full line. Your backend should handle this by replacing
         // or appending to the current state of that line in the database/memory.
         socket.emit('draw', updatedLine, room.roomCode);
+        console.log('*** SOCKET: Emitted updated line segment! ***', updatedLine.id, updatedLine.points.length); // Can uncomment if you want frequent logs
       }
     }
     
@@ -483,6 +527,7 @@ const Whiteboard: React.FC = () => {
 
   // Stop drawing
   const endDrawing = () => {
+    console.log('*** EVENT: endDrawing triggered! ***'); // ADD THIS
     setIsDrawing(false);
     lastPointRef.current = null;
   };
