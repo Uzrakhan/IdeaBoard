@@ -94,6 +94,7 @@ app.get('/', (req: any, res: { send: (arg0: string) => void; }) => {
 // LowDB Setup for Drawing Lines (now comes AFTER io/connectedUsers definitions)
 type Point = { x: number; y: number };
 type DrawingLine = {
+  id: string;
   points: Point[];
   color: string;
   width: number;
@@ -167,27 +168,34 @@ io.on('connection', (socket: Socket) => { // 'socket' here will infer type corre
   //2. `draw` event
   socket.on('draw', async(line: DrawingLine, roomCode: string) => {
     try{
-      const roomData = getRoomData(roomCode);
-      const currentDrawingLines = (await roomData).drawingLines;
+      //RECOMMENDED ADDITION (Authorization check)
+      // You should add logic here to ensure the user (socket.id) is an approved member of `roomCode`.
+      // Example (requires you to fetch room from DB and check member status):
+      
+      const roomData = await getRoomData(roomCode); //await it immediately
+      const currentDrawingLines = roomData.drawingLines; //now roomData is the actual object
 
       // Logic to find and update/add the line in THIS room's drawingLines
       // (This specific findIndex approach can be improved with a unique `lineId` from client)
       const existingLineIndex = currentDrawingLines.findIndex(l =>
-          l.color === line.color &&
-          l.width === line.width &&
-          l.points[0].x === line.points[0].x &&
-          l.points[0].y === line.points[0].y
+          l.id === line.id
       );
+
       if(existingLineIndex > -1) {
         currentDrawingLines[existingLineIndex] = line;
+        console.log(`Updated existing line ${line.id} in room ${roomCode}`);
       } else {
         currentDrawingLines.push(line);
+        console.log(`Added new line ${line.id} to room ${roomCode}`);
       }
 
-      await saveRoomData(roomCode, await roomData);
-      io.to(roomCode).emit('draw', line);
-    }catch (err) {
-      console.error('DB write error (draw) for room', roomCode, ':', err);
+      await saveRoomData(roomCode, roomData);
+      socket.to(roomCode).emit('draw', line);
+      console.log(`Broadcasted draw event for line ${line.id} to room ${roomCode} (excluding sender)`);
+    }catch (err: any) {
+      console.error('DB write/draw processing error for room', roomCode, ':', err);
+      // Optionally, emit an error back to the client
+      socket.emit('drawingError', { message: 'Failed to process drawing.', error: err.message });
     }
   });
 
@@ -227,6 +235,7 @@ console.log('--- BEFORE ROUTE IMPORTS in server.ts ---'); // DIAGNOSTIC LOG
 
 import authRoutes from './routes/auth';
 import roomRoutes from './routes/rooms';
+import Room from './models/Room';
 
 console.log('--- AFTER ROUTE IMPORTS in server.ts ---'); // DIAGNOSTIC LOG
 console.log(`DEBUG: typeof authRoutes = ${typeof authRoutes}`); // DIAGNOSTIC LOG
