@@ -128,6 +128,14 @@ const CreateRoom: React.FC<CreateRoomProps> = ({ onRoomCreated, setCurrentRoom }
                                         >
                                             <i className="fab fa-facebook mr-2"></i> Facebook
                                         </a>
+                                        <a
+                                            href={`mailto:?subject=Join%20my%20collaboration%20room%20on%20IdeaBoard!&body=Hey!%0A%0ACome%20join%20my%20collaboration%20room%20on%20IdeaBoard.%20Click%20the%20link%20to%20get%20started:%0A${encodeURIComponent(roomLink)}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md flex items-center shadow-sm transition-colors duration-200"
+                                        >
+                                            <i className="fas fa-envelope mr-2"></i> Email
+                                        </a>
                                     </div>
                                 </div>
 
