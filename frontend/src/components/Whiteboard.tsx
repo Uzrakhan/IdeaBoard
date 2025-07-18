@@ -162,15 +162,14 @@ const Whiteboard: React.FC = () => {
             return;
         }
 
-        console.log("DEBUG INIT: containerRef.current.clientWidth:", container.clientWidth);
-        console.log("DEBUG INIT: containerRef.current.clientHeight:", container.clientHeight);
-        console.log("DEBUG INIT: window.innerHeight:", window.innerHeight);
+        // --- IMPORTANT NEW LOGS ---
+        console.log(`DEBUG INIT CALL START: clientWidth=${container.clientWidth}, clientHeight=${container.clientHeight}`);
+        console.log(`DEBUG INIT CALL START: canvas.width (before set)=${canvas.width}, canvas.height (before set)=${canvas.height}`);
+        // --- END IMPORTANT NEW LOGS ---
+
 
         const width = container.clientWidth;
         const height = Math.min(container.clientHeight, window.innerHeight * 0.7);
-
-        console.log("DEBUG INIT: Calculated CSS Width:", width);
-        console.log("DEBUG INIT: Calculated CSS Height:", height);
 
         // Update local state to trigger canvas attribute update in JSX
         setCanvasDimensions({ width, height });
@@ -188,9 +187,12 @@ const Whiteboard: React.FC = () => {
         ctxRef.current = ctx; // *** CRUCIAL: Store the context in the ref ***
 
         redrawCanvas(); // Redraw existing lines after canvas re-initialization
+
+        // --- IMPORTANT NEW LOGS ---
+        console.log(`DEBUG INIT CALL END: Final Canvas Pixel Width (attribute): ${canvas.width}`);
+        console.log(`DEBUG INIT CALL END: Final Canvas Pixel Height (attribute): ${canvas.height}`);
+        // --- END IMPORTANT NEW LOGS ---
         
-        console.log("DEBUG INIT: Final Canvas Pixel Width (attribute):", canvas.width);
-        console.log("DEBUG INIT: Final Canvas Pixel Height (attribute):", canvas.height);
     }, [redrawCanvas]); // Depends on redrawCanvas
 
     // --- Main Canvas Setup and Socket Listeners Effect ---
@@ -258,7 +260,7 @@ const Whiteboard: React.FC = () => {
             socket.off('draw', handleDraw);
             socket.off('clear', handleClear);
         };
-    }, [socket, room, canDraw, initCanvas, redrawCanvas]); // Added initCanvas and redrawCanvas as dependencies
+    }, [socket, room, initCanvas, redrawCanvas]); // Added initCanvas and redrawCanvas as dependencies
 
 
     // --- Socket.IO Connection (Separate Effect for clarity) ---
