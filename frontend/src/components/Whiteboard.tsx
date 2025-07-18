@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react'; // Import useCallback
 import { socket } from '../socket';
 import type { Room } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -29,27 +29,24 @@ const Whiteboard: React.FC = () => {
     const brushSizeRef = useRef(brushSize);
     const lastPointRef = useRef<Point | null>(null);
     const linesRef = useRef<DrawingLine[]>([]);
-    const redrawTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const [canvasDimensions, setCanvasDimensions] = useState({ width: 0, height: 0 });
+    //const redrawTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const ctxRef = useRef<CanvasRenderingContext2D | null>(null); // Initialize ctxRef
+    const [canvasDimensions, setCanvasDimensions] = useState({ width: 0, height: 0 }); // This state is actually for the <canvas> attributes
 
     const { currentUser } = useAuth();
 
-    // Determine if the current user is the owner
     const isOwner = currentUser && room?.owner?._id === currentUser._id;
-
-    // --- NEW: Determine if the current user has drawing permissions ---
     const canDraw = isOwner || (
         currentUser && room?.members.some(member =>
             member.user._id === currentUser._id && member.status === 'approved'
         )
     );
-    // -----------------------------------------------------------------
 
     console.log('Current User from AuthContext:', currentUser);
     console.log('Current room state:', room);
-    console.log('Can Draw:', canDraw); // Log this to see its value
+    console.log('Can Draw:', canDraw);
 
-    // --- START: Room Data Fetching ---
+    // --- Room Data Fetching ---
     useEffect(() => {
         const fetchRoomDetails = async () => {
             if (!roomCode) {
@@ -80,8 +77,191 @@ const Whiteboard: React.FC = () => {
         fetchRoomDetails();
     }, [roomCode, navigate]);
 
+    // Keep refs updated with current state
+    useEffect(() => {
+        colorRef.current = color;
+        brushSizeRef.current = brushSize;
+    }, [color, brushSize]);
 
-    // --- START: Socket.IO Connection and Listeners ---
+    //to handle invite click
+    const handleInviteClick = async (): Promise<void> => {
+        if (!room) {
+            alert('Room information is not available.');
+            return;
+        }
+
+        const inviteLink = `${window.location.origin}/join/${room.roomCode}`;
+        console.log("Attempting to copy link:", inviteLink);
+        try{
+            await navigator.clipboard.writeText(inviteLink);
+            alert('Room link copied to clipboard');
+            console.log('Link copied successfully!');
+        } catch(err) {
+            console.error('Failed to copy text:', err);
+            prompt("Please copy this link manually:", inviteLink);
+            alert('Failed to automatically copy link. Please use the prompt to copy manually.');
+        }
+    }
+
+    // --- Drawing Utility Functions (useCallback for stability) ---
+
+    // Define drawLine outside of useEffect so it's stable
+    const drawLine = useCallback((ctx: CanvasRenderingContext2D, line: DrawingLine) => {
+        if (line.points.length === 0) {
+            console.warn(`--- DRAWLINE: Line ID ${line.id} has no points, skipping draw. ---`);
+            return;
+        }
+
+        ctx.beginPath();
+        ctx.lineWidth = line.width;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = line.color;
+
+        console.log(`--- DRAWLINE: Setting style for line ${line.id}: Color=${line.color}, Width=${line.width} ---`);
+
+        ctx.moveTo(line.points[0].x, line.points[0].y);
+        for (let i = 1; i < line.points.length; i++) {
+            ctx.lineTo(line.points[i].x, line.points[i].y);
+        }
+        ctx.stroke();
+        console.log(`--- DRAWLINE: Line ${line.id} stroke completed. ---`);
+    }, []); // No dependencies, as it only uses its arguments
+
+    // Define redrawCanvas outside of useEffect so it's stable
+    const redrawCanvas = useCallback(() => {
+        const canvas = canvasRef.current;
+        const ctx = ctxRef.current; // Use the stored context
+        if (!canvas || !ctx) {
+            console.warn("--- CANVAS: redrawCanvas: Canvas or context not available. ---");
+            return;
+        }
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        console.log("--- CANVAS: redrawCanvas: Canvas cleared. ---");
+        console.log(`--- CANVAS: redrawCanvas: Attempting to draw ${linesRef.current.length} lines. ---`);
+        linesRef.current.forEach((line, index) => {
+            console.log(`--- CANVAS: redrawCanvas: Drawing line ${index + 1}/${linesRef.current.length} (ID: ${line.id}, Points: ${line.points.length}) ---`);
+            drawLine(ctx, line);
+        });
+        console.log("--- CANVAS: redrawCanvas: Finished redrawing all lines. ---");
+    }, [drawLine]); // Depends on drawLine
+
+
+    // Define initCanvas outside of useEffect, using useCallback for stability
+    const initCanvas = useCallback(() => {
+        if (!containerRef.current || !canvasRef.current) {
+            console.warn("DEBUG INIT: containerRef or canvasRef not available during initCanvas.");
+            return;
+        }
+
+        const container = containerRef.current;
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            console.error("DEBUG INIT: Failed to get 2D context from canvas!");
+            return;
+        }
+
+        console.log("DEBUG INIT: containerRef.current.clientWidth:", container.clientWidth);
+        console.log("DEBUG INIT: containerRef.current.clientHeight:", container.clientHeight);
+        console.log("DEBUG INIT: window.innerHeight:", window.innerHeight);
+
+        const width = container.clientWidth;
+        const height = Math.min(container.clientHeight, window.innerHeight * 0.7);
+
+        console.log("DEBUG INIT: Calculated CSS Width:", width);
+        console.log("DEBUG INIT: Calculated CSS Height:", height);
+
+        // Update local state to trigger canvas attribute update in JSX
+        setCanvasDimensions({ width, height });
+
+        const scale = window.devicePixelRatio || 1;
+        // Set the actual pixel dimensions of the canvas drawing surface
+        canvas.width = Math.floor(width * scale);
+        canvas.height = Math.floor(height * scale);
+
+        // Set the CSS dimensions of the canvas for display
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+
+        ctx.scale(scale, scale);
+        ctxRef.current = ctx; // *** CRUCIAL: Store the context in the ref ***
+
+        redrawCanvas(); // Redraw existing lines after canvas re-initialization
+        
+        console.log("DEBUG INIT: Final Canvas Pixel Width (attribute):", canvas.width);
+        console.log("DEBUG INIT: Final Canvas Pixel Height (attribute):", canvas.height);
+    }, [redrawCanvas]); // Depends on redrawCanvas
+
+    // --- Main Canvas Setup and Socket Listeners Effect ---
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        const container = containerRef.current; // Get container ref here too
+        if (!canvas || !container || !room || !socket.connected) {
+            console.log("DEBUG: Main useEffect waiting for refs, room, or socket connection.");
+            return;
+        }
+
+        // Initialize canvas when dependencies are ready
+        initCanvas();
+
+        // Setup ResizeObserver for robust resizing
+        const resizeObserver = new ResizeObserver((entries) => {
+            for (let entry of entries) {
+                if (entry.target === container) {
+                    console.log("DEBUG: Container resized! Re-initializing canvas via ResizeObserver.");
+                    initCanvas();
+                }
+            }
+        });
+        resizeObserver.observe(container);
+
+        // Socket.IO Drawing Event Handlers
+        const handleInitialState = (lines: DrawingLine[]) => {
+            console.log("Socket.IO: Received initial-state:", lines);
+            linesRef.current = lines;
+            redrawCanvas();
+        };
+
+        const handleDraw = (line: DrawingLine) => {
+            console.log("--- FRONTEND: Received remote draw event! ---");
+            const existingLineIndex = linesRef.current.findIndex(l => l.id === line.id);
+
+            if (existingLineIndex !== -1) {
+                linesRef.current[existingLineIndex] = line;
+                console.log("--- FRONTEND: Updated existing line in linesRef.current. ---");
+            } else {
+                linesRef.current = [...linesRef.current, line];
+                console.log("--- FRONTEND: Added new line to linesRef.current. ---");
+            }
+            redrawCanvas();
+        };
+
+        const handleClear = () => {
+            console.log("Socket.IO: Received clear event.");
+            linesRef.current = [];
+            // Use ctxRef.current for clearing
+            if (ctxRef.current && canvasRef.current) {
+                 ctxRef.current.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+            }
+        };
+
+        socket.on('initial-state', handleInitialState);
+        socket.on('draw', handleDraw);
+        socket.on('clear', handleClear);
+
+        // Cleanup
+        return () => {
+            console.log("DEBUG: Cleaning up canvas/socket listeners.");
+            resizeObserver.disconnect(); // Disconnect ResizeObserver
+            socket.off('initial-state', handleInitialState);
+            socket.off('draw', handleDraw);
+            socket.off('clear', handleClear);
+        };
+    }, [socket, room, canDraw, initCanvas, redrawCanvas]); // Added initCanvas and redrawCanvas as dependencies
+
+
+    // --- Socket.IO Connection (Separate Effect for clarity) ---
     useEffect(() => {
         if (!roomCode || !currentUser) {
             console.log("Socket.IO: Waiting for roomCode or currentUser to connect socket.");
@@ -92,7 +272,6 @@ const Whiteboard: React.FC = () => {
             console.log("Socket.IO: Attempting to connect for room:", roomCode);
             socket.connect()
         }
-
 
         socket.on('connect', () => {
             console.log('Socket.IO: Connected successfully! Socket ID:', socket.id);
@@ -133,7 +312,6 @@ const Whiteboard: React.FC = () => {
             console.log(`Socket.IO: Your status in room ${data.roomCode} updated to ${data.status}.`);
             if (data.status === "approved") {
                 toast.success(data.message || `You have been approved for room ${data.roomCode}!`)
-                // No explicit setRoom here, the 'roomUpdated' event will handle it
             } else if (data.status === "rejected") {
                 toast.error(data.message || `Your request for room ${data.roomCode} was rejected.`)
             }
@@ -150,165 +328,7 @@ const Whiteboard: React.FC = () => {
             socket.off('yourRoomStatusUpdated')
             socket.disconnect();
         };
-    }, [roomCode, currentUser]);
-
-    // Keep refs updated with current state
-    useEffect(() => {
-        colorRef.current = color;
-        brushSizeRef.current = brushSize;
-    }, [color, brushSize]);
-
-    const handleInviteClick = async () => {
-        if (!room) {
-            alert('Room information is not available.');
-            return;
-        }
-        const inviteLink = `${window.location.origin}/join/${room.roomCode}`;
-        console.log("Attempting to copy link:", inviteLink);
-        try {
-            await navigator.clipboard.writeText(inviteLink);
-            alert('Room link copied to clipboard');
-            console.log('Link copied successfully!');
-        } catch (err) {
-            console.error('Failed to copy text:', err);
-            prompt("Please copy this link manually:", inviteLink);
-            alert('Failed to automatically copy link. Please use the prompt to copy manually.');
-        }
-    }
-
-    // Initialize canvas and set up event listeners
-    // IMPORTANT: Add `canDraw` to this useEffect's dependency array
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas || !room || !socket.connected) {
-            console.log("DEBUG: Waiting to initialize canvas/drawing listeners. Canvas:", !!canvas, "Room:", !!room, "Socket Connected:", socket.connected);
-            return;
-        }
-
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-
-        const handleInitialState = (lines: DrawingLine[]) => {
-            console.log("Socket.IO: Received initial-state:", lines);
-            linesRef.current = lines;
-            redrawCanvas();
-        };
-
-        const handleDraw = (line: DrawingLine) => {
-            console.log("--- FRONTEND: Received remote draw event! ---");
-            console.log("Received line ID:", line.id);
-            console.log("Received line color:", line.color);
-            console.log("Received line width:", line.width);
-            console.log("Received line points count:", line.points.length);
-
-            const existingLineIndex = linesRef.current.findIndex(l => l.id === line.id);
-
-            if (existingLineIndex !== -1) {
-                linesRef.current[existingLineIndex] = line;
-                console.log("--- FRONTEND: Updated existing line in linesRef.current. ---");
-            } else {
-                linesRef.current = [...linesRef.current, line];
-                console.log("--- FRONTEND: Added new line to linesRef.current. ---");
-            }
-
-            console.log("--- FRONTEND: Total lines in linesRef.current after update:", linesRef.current.length);
-            redrawCanvas();
-            console.log("--- FRONTEND: Called redrawCanvas from handleDraw. ---");
-        };
-
-        const handleClear = () => {
-            console.log("Socket.IO: Received clear event.");
-            linesRef.current = [];
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-        };
-
-        const initCanvas = () => {
-            if (!containerRef.current) return;
-
-            const container = containerRef.current;
-            const width = container.clientWidth;
-            const height = Math.min(container.clientHeight, window.innerHeight * 0.7);
-
-            setCanvasDimensions({ width, height });
-
-            const scale = window.devicePixelRatio || 1;
-            canvas.width = Math.floor(width * scale);
-            canvas.height = Math.floor(height * scale);
-
-            canvas.style.width = `${width}px`;
-            canvas.style.height = `${height}px`;
-
-            ctx.scale(scale, scale);
-
-            redrawCanvas();
-        };
-
-        const redrawCanvas = () => {
-            if (!canvas || !ctx) {
-                console.warn("--- CANVAS: redrawCanvas: Canvas or context not available. ---");
-                return;
-            }
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            console.log("--- CANVAS: redrawCanvas: Canvas cleared. ---");
-            console.log(`--- CANVAS: redrawCanvas: Attempting to draw ${linesRef.current.length} lines. ---`);
-            linesRef.current.forEach((line, index) => {
-                console.log(`--- CANVAS: redrawCanvas: Drawing line ${index + 1}/${linesRef.current.length} (ID: ${line.id}, Points: ${line.points.length}) ---`);
-                drawLine(ctx, line);
-            });
-            console.log("--- CANVAS: redrawCanvas: Finished redrawing all lines. ---");
-        };
-
-        const drawLine = (ctx: CanvasRenderingContext2D, line: DrawingLine) => {
-            if (line.points.length === 0) {
-                console.warn(`--- DRAWLINE: Line ID ${line.id} has no points, skipping draw. ---`);
-                return;
-            }
-
-            if (line.points.length < 2) {
-                console.warn(`--- DRAWLINE: Line ID ${line.id} has less than 2 points (${line.points.length}), might not draw visible line. ---`);
-            }
-
-            ctx.beginPath();
-            ctx.lineWidth = line.width;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            ctx.strokeStyle = line.color;
-
-            console.log(`--- DRAWLINE: Setting style for line ${line.id}: Color=${line.color}, Width=${line.width} ---`);
-
-            ctx.moveTo(line.points[0].x, line.points[0].y);
-            for (let i = 1; i < line.points.length; i++) {
-                ctx.lineTo(line.points[i].x, line.points[i].y);
-            }
-            ctx.stroke();
-            console.log(`--- DRAWLINE: Line ${line.id} stroke completed. ---`);
-        };
-
-        const handleResize = () => {
-            if (redrawTimeoutRef.current) {
-                clearTimeout(redrawTimeoutRef.current);
-            }
-
-            redrawTimeoutRef.current = setTimeout(() => {
-                initCanvas();
-            }, 100);
-        };
-
-        initCanvas();
-        window.addEventListener('resize', handleResize);
-
-        socket.on('initial-state', handleInitialState);
-        socket.on('draw', handleDraw);
-        socket.on('clear', handleClear);
-
-        return () => {
-            window.removeEventListener('resize', handleResize);
-            socket.off('initial-state', handleInitialState);
-            socket.off('draw', handleDraw);
-            socket.off('clear', handleClear);
-            if (redrawTimeoutRef.current) clearTimeout(redrawTimeoutRef.current);
-        };
-    }, [socket, room, canDraw]); // <-- ADD `canDraw` here!
+    }, [roomCode, currentUser]); // Dependencies for socket connection
 
 
     // Get coordinates relative to canvas
@@ -327,6 +347,7 @@ const Whiteboard: React.FC = () => {
             clientY = e.clientY;
         }
 
+        // Return coordinates relative to the canvas's CSS size
         return {
             x: clientX - rect.left,
             y: clientY - rect.top
@@ -335,13 +356,11 @@ const Whiteboard: React.FC = () => {
 
     // Start drawing
     const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
-        // --- NEW: Permission Check ---
         if (!canDraw) {
             toast.warn("You don't have permission to draw yet. Please wait for the room owner to approve your request.");
             console.log("Drawing prevented: User does not have permission.");
             return;
         }
-        // -----------------------------
 
         console.log('*** EVENT: startDrawing triggered! ***', e.type);
         if ('touches' in e) {
@@ -369,20 +388,15 @@ const Whiteboard: React.FC = () => {
 
     // Draw while moving
     const draw = (e: React.MouseEvent | React.TouchEvent) => {
-        // --- NEW: Permission Check ---
         if (!canDraw || !isDrawing || !lastPointRef.current) {
-            // No toast here to avoid spamming for every mouse move
             return; 
         }
-        // -----------------------------
 
         console.log('*** EVENT: draw (mousemove/touchmove) triggered! ***', e.type);
 
         const canvas = canvasRef.current;
-        if (!canvas) return;
-
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
+        const ctx = ctxRef.current; // Use the stored context
+        if (!canvas || !ctx) return;
 
         const point = getCoordinates(e);
 
@@ -427,19 +441,15 @@ const Whiteboard: React.FC = () => {
 
     // Clear the board
     const clearBoard = () => {
-        // --- NEW: Permission Check ---
-        if (!canDraw) { // Only allow approved users/owner to clear the board
+        if (!canDraw) { 
             toast.warn("Only approved members or the owner can clear the board.");
             console.log("Clear board prevented: User does not have permission.");
             return;
         }
-        // -----------------------------
 
         const canvas = canvasRef.current;
-        if (!canvas) return;
-
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
+        const ctx = ctxRef.current; // Use the stored context
+        if (ctx && canvas) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
 
@@ -453,22 +463,18 @@ const Whiteboard: React.FC = () => {
 
     // Touch event handlers
     const handleTouchStart = (e: React.TouchEvent) => {
-        // --- NEW: Permission Check ---
         if (!canDraw) {
             toast.warn("You don't have permission to draw yet. Please wait for the room owner to approve your request.");
             return;
         }
-        // -----------------------------
         e.preventDefault();
         startDrawing(e);
     };
 
     const handleTouchMove = (e: React.TouchEvent) => {
-        // --- NEW: Permission Check ---
         if (!canDraw) {
             return;
         }
-        // -----------------------------
         e.preventDefault();
         draw(e);
     };
@@ -638,7 +644,6 @@ const Whiteboard: React.FC = () => {
                 >
                     <canvas
                         ref={canvasRef}
-                        // Conditionally attach drawing event listeners based on `canDraw`
                         onMouseDown={canDraw ? startDrawing : undefined}
                         onMouseMove={canDraw ? draw : undefined}
                         onMouseUp={canDraw ? endDrawing : undefined}
