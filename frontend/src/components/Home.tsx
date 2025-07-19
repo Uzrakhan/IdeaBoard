@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import IdeaBoard from '../assets/IdeaBoard.png'
 
 const Home: React.FC = () => {
   return (
@@ -28,7 +29,9 @@ const Home: React.FC = () => {
           </div>
         </div>
         <div className="md:w-1/2 flex justify-center">
-          <div className="bg-gray-200 border-2 border-dashed rounded-xl w-full h-80 md:h-96" />
+          <div className="bg-gray-200 border-2 border-dashed rounded-xl w-full h-80 md:h-96">
+            <img src={IdeaBoard} className='rounded-xl'/>
+          </div>
         </div>
       </section>
 
