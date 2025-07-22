@@ -95,22 +95,44 @@ export const getRoom = async (req: express.Request, res: express.Response) => {
         const isApprovedMember = currentUserMemberEntry?.status === "approved";
         const isPendingMember = currentUserMemberEntry?.status === 'pending';
 
-        // Authorization Logic:
-        // Allow access to the full room object if the user is the owner,
-        // an approved member, OR a pending member.
+        // NEW LOGIC: Allow authenticated users to get basic public info,
+        // regardless of whether they are owner,approved memeber or pending memeber or none.
+        // If they are an atual member (owner,approved,pending), they get the full details.
+        //Otherwise, they get minimal public details.
         if (isOwner || isApprovedMember || isPendingMember) {
             console.log(`[getRoom Controller - L7] Sending FULL room data for ${roomCode} to user ${userId}. Status: ${isOwner ? 'Owner' : isApprovedMember ? 'Approved' : 'Pending'}`);
             return res.status(200).json({
-                // Using .toObject() ensures you get a plain JS object,
-                // which is good practice before sending over API.
-                ...room.toObject(),
-                members: Array.isArray(room.members) ? room.members : [] // Ensure members is an array
+                message: 'Full room data granted',
+                room: {
+                    ...room.toObject(),
+                    members: Array.isArray(room.members) ? room.members : [] // Ensure members is an array
+                }
             });
         }else {
-            // If the user is authenticated but is NOT the owner, nor approved, nor pending.
-            // This means they have no relationship with this room.
-            console.warn(`[getRoom Controller - L6] User ${userId} is authenticated but NOT owner, approved, or pending for room ${roomCode}. Returning 403 Forbidden.`);
-            return res.status(403).json({ message: 'Forbidden: You are not authorized to access this room.' });
+            // User is authenticated but not associated with this room.
+            console.log(`[getRoom Controller - L6] User ${userId} is authenticated but not owner, approved, or pending for room ${roomCode}. Returning public room info.`);
+            return res.status(200).json({
+                message: 'Room found, awaiting join request.',
+                room: {
+                    _id: room._id?.toString(),
+                    roomCode: room.roomCode,
+                    name: room.name,
+                    owner: {
+                        _id: roomOwner._id?.toString(),
+                        username: roomOwner.username || 'Unknown Owner'
+                    },
+                    // Crucially, include members here even for non-members
+                    // The frontend needs to know who is in the room and their statuses
+                    // to determine if the user can join or is pending.
+                    members: room.members.map(m => ({
+                        user: {
+                            _id: (m.user as IUser)?._id?.toString(),
+                            username: (m.user as IUser)?.username || 'Unknown'
+                        },
+                        status: m.status
+                    }))
+                }
+            })
         }
     } catch (err: any) {
         // --- NEW/ENHANCED LOGGING IN CATCH BLOCK ---
