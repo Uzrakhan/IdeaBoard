@@ -87,42 +87,31 @@ export const getRoom = async (req: express.Request, res: express.Response) => {
 
         const roomOwner = room.owner as IUser;
         const isOwner = roomOwner?._id?.toString() === userId;
-        const isApprovedMember = Array.isArray(room.members) && room.members.some(
-            m => (m.user as IUser)?._id?.toString() === userId && m.status === 'approved'
-        );
 
-        if (!isApprovedMember && !isOwner) {
-            // --- NEW LOG ---
-            console.log(`[getRoom Controller - L6] User ${userId} is not owner or approved member of ${roomCode}. Returning partial room info.`);
-            // --- END NEW LOG ---
+        //find the specific member entry for the requesting user
+        const currentUserMemberEntry = room.members.find(
+            m => (m.user as IUser)?._id?.toString() === userId
+        )
+        const isApprovedMember = currentUserMemberEntry?.status === "approved";
+        const isPendingMember = currentUserMemberEntry?.status === 'pending';
+
+        // Authorization Logic:
+        // Allow access to the full room object if the user is the owner,
+        // an approved member, OR a pending member.
+        if (isOwner || isApprovedMember || isPendingMember) {
+            console.log(`[getRoom Controller - L7] Sending FULL room data for ${roomCode} to user ${userId}. Status: ${isOwner ? 'Owner' : isApprovedMember ? 'Approved' : 'Pending'}`);
             return res.status(200).json({
-                message: 'Room found, request to join.',
-                room: {
-                    _id: room._id?.toString(),
-                    roomCode: room.roomCode,
-                    name: room.name,
-                    owner: {
-                        _id: roomOwner._id?.toString(),
-                        username: roomOwner.username || 'Unknown Owner'
-                    },
-                    members: room.members.map(m => ({
-                        user: {
-                            _id: (m.user as IUser)._id?.toString(),
-                            username: (m.user as IUser).username || 'Unknown'
-                        },
-                        status: m.status
-                    }))
-                }
+                // Using .toObject() ensures you get a plain JS object,
+                // which is good practice before sending over API.
+                ...room.toObject(),
+                members: Array.isArray(room.members) ? room.members : [] // Ensure members is an array
             });
+        }else {
+            // If the user is authenticated but is NOT the owner, nor approved, nor pending.
+            // This means they have no relationship with this room.
+            console.warn(`[getRoom Controller - L6] User ${userId} is authenticated but NOT owner, approved, or pending for room ${roomCode}. Returning 403 Forbidden.`);
+            return res.status(403).json({ message: 'Forbidden: You are not authorized to access this room.' });
         }
-
-        // --- NEW LOG ---
-        console.log(`[getRoom Controller - L7] Sending full room data for ${roomCode} to user ${userId}.`);
-        // --- END NEW LOG ---
-        res.status(200).json({
-            ...room.toObject(),
-            members: Array.isArray(room.members) ? room.members : []
-        });
     } catch (err: any) {
         // --- NEW/ENHANCED LOGGING IN CATCH BLOCK ---
         console.error(`[getRoom Controller - L8] CATCH BLOCK: ERROR fetching room ${roomCode}. Error message:`, err.message);
