@@ -226,17 +226,18 @@ const Whiteboard: React.FC = () => {
         };
 
         const handleDraw = (line: DrawingLine) => {
-            console.log("--- FRONTEND: Received remote draw event! ---");
+            console.log("--- FRONTEND: Received remote draw event! ---", line.id, line.points.length);
             const existingLineIndex = linesRef.current.findIndex(l => l.id === line.id);
 
             if (existingLineIndex !== -1) {
                 linesRef.current[existingLineIndex] = line;
-                console.log("--- FRONTEND: Updated existing line in linesRef.current. ---");
+                console.log("--- FRONTEND: Updated existing line in linesRef.current. New points count:", linesRef.current[existingLineIndex].points.length);
             } else {
                 linesRef.current = [...linesRef.current, line];
-                console.log("--- FRONTEND: Added new line to linesRef.current. ---");
+                console.log("--- FRONTEND: Added new line to linesRef.current. Total lines:", linesRef.current.length);
             }
             redrawCanvas();
+            console.log("--- FRONTEND: redrawCanvas called after remote draw. ---");
         };
 
         const handleClear = () => {
@@ -381,8 +382,11 @@ const Whiteboard: React.FC = () => {
         };
 
         linesRef.current = [...linesRef.current, newLine];
+        console.log("FRONTEND: Initial line added to linesRef:", linesRef.current.length, linesRef.current[linesRef.current.length - 1].id);
+
         if (room && socket.connected) {
             socket.emit('draw', newLine, room.roomCode);
+            console.log('*** SOCKET: Emitted initial line! ***', newLine.id);
         } else {
             console.warn("Attempted to draw but room not loaded or socket not connected.");
         }
