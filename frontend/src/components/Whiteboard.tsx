@@ -359,6 +359,7 @@ const Whiteboard: React.FC = () => {
 
     // Start drawing
     const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
+        console.log(`DEBUG: Event Handler Triggered: startDrawing (type: ${e.type})`); // <-- ADD THIS LOG
         if (!canDraw) {
             toast.warn("You don't have permission to draw yet. Please wait for the room owner to approve your request.");
             console.log("Drawing prevented: User does not have permission.");
@@ -394,6 +395,7 @@ const Whiteboard: React.FC = () => {
 
     // Draw while moving
     const draw = (e: React.MouseEvent | React.TouchEvent) => {
+        console.log(`DEBUG: Event Handler Triggered: draw (type: ${e.type})`); // <-- ADD THIS LOG
         if (!canDraw || !isDrawing || !lastPointRef.current) {
             return; 
         }
@@ -440,6 +442,7 @@ const Whiteboard: React.FC = () => {
 
     // Stop drawing
     const endDrawing = () => {
+        console.log('DEBUG: Event Handler Triggered: endDrawing'); // <-- ADD THIS LOG
         console.log('*** EVENT: endDrawing triggered! ***');
         setIsDrawing(false);
         lastPointRef.current = null;
@@ -469,6 +472,7 @@ const Whiteboard: React.FC = () => {
 
     // Touch event handlers
     const handleTouchStart = (e: React.TouchEvent) => {
+        console.log('DEBUG: Event Handler Triggered: handleTouchStart'); // <-- ADD THIS LOG
         if (!canDraw) {
             toast.warn("You don't have permission to draw yet. Please wait for the room owner to approve your request.");
             return;
@@ -478,6 +482,7 @@ const Whiteboard: React.FC = () => {
     };
 
     const handleTouchMove = (e: React.TouchEvent) => {
+        console.log('DEBUG: Event Handler Triggered: handleTouchMove'); // <-- ADD THIS LOG
         if (!canDraw) {
             return;
         }
