@@ -396,7 +396,13 @@ const Whiteboard: React.FC = () => {
     // Draw while moving
     const draw = (e: React.MouseEvent | React.TouchEvent) => {
         console.log(`DEBUG: Event Handler Triggered: draw (type: ${e.type})`); // <-- ADD THIS LOG
+
+        // --- NEW LOGS HERE ---
+        console.log(`DEBUG DRAW CHECK: canDraw=${canDraw}, isDrawing=${isDrawing}, lastPointRef.current=${lastPointRef.current ? 'true' : 'false'}`);
+         // --- END NEW LOGS ---
+
         if (!canDraw || !isDrawing || !lastPointRef.current) {
+            console.warn("DRAW Function: Early exit due to drawing state conditions."); // <-- NEW LOG
             return; 
         }
 
@@ -404,7 +410,15 @@ const Whiteboard: React.FC = () => {
 
         const canvas = canvasRef.current;
         const ctx = ctxRef.current; // Use the stored context
-        if (!canvas || !ctx) return;
+
+        // --- NEW LOGS HERE ---
+        console.log(`DEBUG DRAW CHECK: canvasRef.current=${canvas ? 'true' : 'false'}, ctxRef.current=${ctx ? 'true' : 'false'}`);
+        // --- END NEW LOGS ---
+
+        if (!canvas || !ctx) {
+            console.warn("DRAW Function: Early exit due to missing canvas or context."); // <-- NEW LOG
+            return;
+        }
 
         const point = getCoordinates(e);
 
@@ -418,6 +432,9 @@ const Whiteboard: React.FC = () => {
         ctx.stroke();
         console.log('*** CANVAS: Local drawing stroke performed! ***');
 
+        // --- NEW LOGS HERE ---
+        console.log(`DEBUG DRAW CHECK: linesRef.current.length=${linesRef.current.length}`);
+        // --- END NEW LOGS ---
 
         if (linesRef.current.length > 0) {
             const lastLine = linesRef.current[linesRef.current.length - 1];
@@ -431,10 +448,19 @@ const Whiteboard: React.FC = () => {
                 updatedLine
             ];
 
+            // --- NEW LOGS HERE ---
+            console.log(`DEBUG DRAW CHECK: room=${room ? 'true' : 'false'}, socket.connected=${socket.connected}`);
+            // --- END NEW LOGS ---
+
+
             if (room && socket.connected) {
                 socket.emit('draw', updatedLine, room.roomCode);
                 console.log('*** SOCKET: Emitted updated line segment! ***', updatedLine.id, updatedLine.points.length);
+            } else{
+                console.warn("DRAW Function: Socket emit skipped - room not loaded or socket not connected for update."); // <-- NEW LOG
             }
+        }else {
+            console.warn("DRAW Function: linesRef.current is empty, cannot update last line."); // <-- NEW LOG
         }
 
         lastPointRef.current = point;
