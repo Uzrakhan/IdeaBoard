@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { login, signup } from '../api'; // Ensure login and signup are imported
 import { useAuth } from '../context/AuthContext'; // Import useAuth hook
+import GoogleAuthButton from './GoogleAuthButton';
 
 const Auth: React.FC = () => {
     const [isLogin, setIsLogin] = useState(true);
@@ -55,8 +56,8 @@ const Auth: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-100 font-inter">
-            <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+        <div className="min-h-screen flex items-center justify-center bg-gray-700 font-inter">
+            <div className="bg-gray-100 p-4 rounded-lg shadow-lg w-full max-w-md">
                 <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
                     {isLogin ? 'Login' : 'Sign Up'}
                 </h2>
@@ -109,7 +110,27 @@ const Auth: React.FC = () => {
                         {isLogin ? 'Need an account? Sign Up' : 'Already have an account? Login'}
                     </button>
                 </div>
+
+                {/*VISUAL SEPARATOR */}
+                <div className=' relative mt-6'>
+                    <div className='absolute inset-0 flex items-center'>
+                        <div className='w-full border-t border-gray-300'></div>
+                    </div>
+                    <div className='relative flex justify-center text-sm'>
+                        <span className='bg-white px-2 text-gray-500'>
+                            or
+                        </span>
+                    </div>
+                </div>
+
+                {/*Render the google auth button */}
+                <div className='mt-6 flex justify-center'>
+                    <GoogleAuthButton />
+                </div>
             </div>
+            
+            
+
         </div>
     );
 };

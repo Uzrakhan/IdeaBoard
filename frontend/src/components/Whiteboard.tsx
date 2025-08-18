@@ -195,12 +195,13 @@ const Whiteboard: React.FC = () => {
         
     }, [redrawCanvas]); // Depends on redrawCanvas
 
+    // --- Core Canvas Initialization and Resize Handling ---
     // --- Main Canvas Setup and Socket Listeners Effect ---
     useEffect(() => {
         const canvas = canvasRef.current;
         const container = containerRef.current; // Get container ref here too
-        if (!canvas || !container || !room || !socket.connected) {
-            console.log("DEBUG: Main useEffect waiting for refs, room, or socket connection.");
+        if (!canvas || !container) {
+            console.warn("DEBUG INIT EFFECT: Canvas or container ref not available yet. Waiting for mount.");
             return;
         }
 
@@ -468,7 +469,10 @@ const Whiteboard: React.FC = () => {
 
     // Stop drawing
     const endDrawing = () => {
-        console.log('DEBUG: Event Handler Triggered: endDrawing'); // <-- ADD THIS LOG
+        console.log('DEBUG: Event Handler Triggered: endDrawing');
+        if (!canDraw) { // Add this line if it's not there
+            return;
+        }
         console.log('*** EVENT: endDrawing triggered! ***');
         setIsDrawing(false);
         lastPointRef.current = null;
@@ -681,13 +685,13 @@ const Whiteboard: React.FC = () => {
                 >
                     <canvas
                         ref={canvasRef}
-                        onMouseDown={canDraw ? startDrawing : undefined}
-                        onMouseMove={canDraw ? draw : undefined}
-                        onMouseUp={canDraw ? endDrawing : undefined}
-                        onMouseLeave={canDraw ? endDrawing : undefined}
-                        onTouchStart={canDraw ? handleTouchStart : undefined}
-                        onTouchMove={canDraw ? handleTouchMove : undefined}
-                        onTouchEnd={canDraw ? endDrawing : undefined}
+                        onMouseDown={startDrawing}
+                        onMouseMove={draw}
+                        onMouseUp={endDrawing}
+                        onMouseLeave={endDrawing}
+                        onTouchStart={handleTouchStart}
+                        onTouchMove={handleTouchMove}
+                        onTouchEnd={endDrawing}
                         className={`w-full h-full border border-gray-200 ${canDraw ? 'cursor-crosshair' : 'cursor-not-allowed'}`}
                         width={canvasDimensions.width}
                         height={canvasDimensions.height}
