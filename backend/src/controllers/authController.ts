@@ -91,9 +91,7 @@ export const googleLogin = async (req: express.Request, res: express.Response) =
         });
 
     } catch (error) {
-        console.error('Google login error:', error);
-        console.error('Google token verification failed:', error); // <-- Add this log
+        console.error('Google login authenticaton failed:', error); // <-- Add this log
         res.status(500).json({ message: 'Authentication failed.' });
-        throw new Error('Invalid token payload'); // This is the error you are seeing
     }
 };
