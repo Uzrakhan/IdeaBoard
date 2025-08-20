@@ -25,12 +25,14 @@ const Auth: React.FC = () => {
             if (isLogin) {
                 // Manual Login Logic
                 const response = await login(username, password);
-                if (response.data.username && response.data.token) {
+                if (response.data.user && response.data.token) {
+                    /*
                     const userData = {
                         _id: response.data.userId,
                         username: response.data.username,
                     }
-                    authLogin(response.data.token, userData);
+                    */
+                    authLogin(response.data.token, response.data.user);
                     navigate('/');
                 } else {
                     setMessage('Login failed: User data not found.');
