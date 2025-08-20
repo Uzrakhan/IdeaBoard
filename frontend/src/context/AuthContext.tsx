@@ -3,58 +3,58 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 export interface User {
   _id: string;
   username: string;
+  // Add an optional 'name' property for Google users
+  name?: string;
 }
 
 export interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
-  login: (token: string, userId: string, username: string) => void;
+  login: (token: string, userData: any) => void;
   logout: () => void;
   currentUser: User | null;
 }
 
-// Define the props for AuthProvider
 interface AuthProviderProps {
   children: React.ReactNode;
 }
 
-// Create context with proper typing
 export const AuthContext = createContext<AuthContextType | null>(null);
-
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
+    // Check for both the token and the user object on component mount
     const token = localStorage.getItem('token');
-    const userId = localStorage.getItem('userId');
-    const username = localStorage.getItem('username') || '';
+    const storedUser = localStorage.getItem('user');
 
-    if (token && userId && username) { // All three must be present for a valid session
-      setIsAuthenticated(true);
-      setUser({ _id: userId, username });
-    }else{
-      localStorage.removeItem('token');
-      localStorage.removeItem('userId');
-      localStorage.removeItem('username');
-      setIsAuthenticated(false);
-      setUser(null)
+    if (token && storedUser && storedUser !== 'undefined') {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setIsAuthenticated(true);
+        setUser(parsedUser);
+      } catch (error) {
+        console.error('Failed to parse user data from localStorage:', error);
+        logout(); // Clear storage if data is corrupted
+      }
+    } else {
+      logout();
     }
-  }, []); // Run only once on mount
+  }, []);
 
-  const login = (token: string, userId: string, username: string) => {
+  // ✅ The login function now accepts a single user object
+  const login = (token: string, userData: any) => {
     localStorage.setItem('token', token);
-    localStorage.setItem('userId', userId);
-    localStorage.setItem('username', username);
+    localStorage.setItem('user', JSON.stringify(userData));
     setIsAuthenticated(true);
-    setUser({ _id: userId, username });
+    setUser(userData);
   };
 
   const logout = () => {
     localStorage.removeItem('token');
-    localStorage.removeItem('userId');
-    localStorage.removeItem('username');
+    localStorage.removeItem('user');
     setIsAuthenticated(false);
     setUser(null);
   };
@@ -64,7 +64,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user,
     login,
     logout,
-    currentUser: user // or you can use user ?? { userId: '', username: '' } for a fallback
+    currentUser: user,
   };
 
   return (

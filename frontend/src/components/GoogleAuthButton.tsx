@@ -1,27 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 
 const GoogleAuthButton:React.FC = () => {
     // to remember who logged-in
-    const [user,setUser] = useState(null);
+    //const [user,setUser] = useState(null);
+    const navigate = useNavigate();
+    const { login: authLogin } = useAuth();
 
     //this hook runs only once when the component loads
     // its job is to check if a user is already logged in
     // from a previous session by looking in localStorage
-    useEffect(() => {
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-            try{
-                //if user is already logged in then store them in setUser
-                setUser(JSON.parse(storedUser))
-            }catch(error) {
-                console.error('Failed to parse user from localstorage:', error);
-                localStorage.removeItem('user');
-                localStorage.removeItem('appToken')
-            }
-        }
-    },[]);
+    
 
     //this function handles the login success procedure
     // here its a 2-step process
@@ -36,41 +28,29 @@ const GoogleAuthButton:React.FC = () => {
         // Instead, we send the ID Token to our backend's server
         // If the token is valid then backend issues an appToken which will be unique to my app
         try{
-            const backendResponse = await axios.post('http://localhost:5000/api/auth/google', { token: idToken });
+            const backendResponse = await axios.post('http://localhost:5000/api/auth/google', { credential: idToken });
 
-            // now we want the user data and the appToken to be remembered , so that user can login and thier data is remembered
-            localStorage.setItem('appToken', backendResponse.data.appToken);
-            localStorage.setItem('user', JSON.stringify(backendResponse.data.user));
-
-            // we store the saved user in setUser
-            setUser(backendResponse.data.user);
+            if (backendResponse.data.user && backendResponse.data.token) {
+                authLogin(backendResponse.data.token, backendResponse.data.user);
+                navigate('/');
+            } else {
+                console.error('Login failed: User data not found in response.');
+                alert('Login failed. Please try again.');
+            }
         } catch(error) {
             console.error('Login failed:', error);
             alert('Login failed. Please try again.')
         }
     }
 
+    /*
     const handleLogout = () => {
         localStorage.removeItem('appToken');
         localStorage.removeItem('user');
         setUser(null);
     }
+    */
 
-    if(user) {
-        return (
-            <div className=''>
-                <p>Welcome</p>
-                <img 
-                    
-                    alt="User profile" 
-                    style={{ width: 40, height: 40, borderRadius: '50%' }} 
-                />
-                <button onClick={handleLogout}>
-                    Logout
-                </button>
-            </div>
-        )
-    }
 
     
   return (

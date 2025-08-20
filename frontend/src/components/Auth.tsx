@@ -1,56 +1,49 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { login, signup } from '../api'; // Ensure login and signup are imported
-import { useAuth } from '../context/AuthContext'; // Import useAuth hook
+import { login, signup } from '../api';
+import { useAuth } from '../context/AuthContext';
 import GoogleAuthButton from './GoogleAuthButton';
 
 const Auth: React.FC = () => {
     const [isLogin, setIsLogin] = useState(true);
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const [message, setMessage] = useState(''); // For displaying success/error messages to the user
+    const [message, setMessage] = useState('');
     const navigate = useNavigate();
-    const { login: authLogin } = useAuth(); // Rename imported login to avoid conflict
+    const { login: authLogin } = useAuth();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setMessage(''); // Clear previous messages
+        setMessage('');
 
-        // Basic Frontend Validation
         if (!username.trim() || !password.trim()) {
             setMessage('Username and password cannot be empty.');
-            console.warn('[Auth Component] Frontend validation: Username or password is empty.');
             return;
         }
-
-        // Debugging: Log the data being sent
-        console.log(`[Auth Component] Attempting ${isLogin ? 'Login' : 'Signup'} for username: "${username}"`);
-        console.log(`[Auth Component] Password length: ${password.length} (not logging actual password for security)`);
-
+        
         try {
-            let response;
             if (isLogin) {
-                response = await login(username, password);
-                setMessage('Login successful!');
-                console.log('[Auth Component] Login API response:', response.data);
+                // Manual Login Logic
+                const response = await login(username, password);
+                if (response.data.username && response.data.token) {
+                    const userData = {
+                        _id: response.data.userId,
+                        username: response.data.username,
+                    }
+                    authLogin(response.data.token, userData);
+                    navigate('/');
+                } else {
+                    setMessage('Login failed: User data not found.');
+                }
             } else {
-                response = await signup(username, password);
+                // Signup Logic
+                const {} = await signup(username, password);
                 setMessage('Signup successful! Please log in.');
-                console.log('[Auth Component] Signup API response:', response.data);
+                setIsLogin(true); // Automatically switch to the login form
             }
-
-            // If login was successful, update AuthContext and navigate
-            if (isLogin && response.data.token && response.data.userId && response.data.username) {
-                authLogin(response.data.token, response.data.userId, response.data.username);
-                navigate('/'); // Navigate to home/dashboard after successful login
-            } else if (!isLogin) {
-                // For signup, switch to login form automatically
-                setIsLogin(true);
-            }
-
         } catch (error: any) {
-            console.error(`[Auth Component] ${isLogin ? 'Login' : 'Signup'} error:`, error);
-            const errorMessage = error.response?.data?.message || error.response?.data?.error || 'An unexpected error occurred.';
+            console.error(`${isLogin ? 'Login' : 'Signup'} error:`, error);
+            const errorMessage = error.response?.data?.message || 'An unexpected error occurred.';
             setMessage(errorMessage);
         }
     };
@@ -110,9 +103,7 @@ const Auth: React.FC = () => {
                         {isLogin ? 'Need an account? Sign Up' : 'Already have an account? Login'}
                     </button>
                 </div>
-
-                {/*VISUAL SEPARATOR */}
-                <div className=' relative mt-6'>
+                <div className='relative mt-6'>
                     <div className='absolute inset-0 flex items-center'>
                         <div className='w-full border-t border-gray-300'></div>
                     </div>
@@ -122,18 +113,12 @@ const Auth: React.FC = () => {
                         </span>
                     </div>
                 </div>
-
-                {/*Render the google auth button */}
                 <div className='mt-6 flex justify-center'>
                     <GoogleAuthButton />
                 </div>
             </div>
-            
-            
-
         </div>
     );
 };
 
 export default Auth;
-    
