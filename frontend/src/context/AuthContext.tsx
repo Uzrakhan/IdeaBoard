@@ -10,7 +10,7 @@ export interface User {
 export interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
-  login: (token: string, userData: any) => void;
+  login: (token: string, userData: any) => Promise<void>;
   logout: () => void;
   currentUser: User | null;
 }
@@ -45,7 +45,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   // ✅ The login function now accepts a single user object
-  const login = (token: string, userData: any) => {
+  const login = async (token: string, userData: any) => {
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(userData));
     setIsAuthenticated(true);

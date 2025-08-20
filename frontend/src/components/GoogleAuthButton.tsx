@@ -34,7 +34,7 @@ const GoogleAuthButton:React.FC = () => {
             const { user, token } = backendResponse.data;
 
             if (user && token) {
-                authLogin(token, user);
+                await authLogin(token, user);
                 navigate('/');
             } else {
                 console.error('Login failed: User data not found in response.');
