@@ -107,3 +107,4 @@ export const updateRoomMemberStatus = (
     api.put(`/rooms/${roomCode}/members/${memberId}/status`, { memberId ,status }).catch(handleError)
 
 
+export { api }

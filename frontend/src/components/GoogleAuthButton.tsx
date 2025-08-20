@@ -1,10 +1,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
-import axios from 'axios';
+import { api } from '../api'
 import { useAuth } from '../context/AuthContext';
 
-const API_URL = import.meta.env.VITE_APP_API_URL || 'http://localhost:5000/api';
 
 const GoogleAuthButton:React.FC = () => {
     // to remember who logged-in
@@ -30,7 +29,7 @@ const GoogleAuthButton:React.FC = () => {
         // Instead, we send the ID Token to our backend's server
         // If the token is valid then backend issues an appToken which will be unique to my app
         try{
-            const backendResponse = await axios.post(`${API_URL}/auth/google`, { credential: idToken });
+            const backendResponse = await api.post('/auth/google', { credential: idToken });
 
             if (backendResponse.data.user && backendResponse.data.token) {
                 authLogin(backendResponse.data.token, backendResponse.data.user);
