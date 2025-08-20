@@ -11,6 +11,7 @@ dotenv.config()
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 
+
 export const googleLogin = async (req: express.Request, res: express.Response) => {
     const { credential } = req.body;
 
@@ -19,11 +20,13 @@ export const googleLogin = async (req: express.Request, res: express.Response) =
     }
 
     try {
+        console.log('Backend received Google credential:', credential); // <-- Add this log
         const ticket = await client.verifyIdToken({
             idToken: credential,
             audience: process.env.GOOGLE_CLIENT_ID,
         });
 
+        console.log('Google verification successful, payload:', ticket.getPayload()); // <-- Add this log
         const payload = ticket.getPayload();
         if (!payload) {
             return res.status(401).json({ message: 'Invalid token payload.' });
@@ -89,6 +92,8 @@ export const googleLogin = async (req: express.Request, res: express.Response) =
 
     } catch (error) {
         console.error('Google login error:', error);
+        console.error('Google token verification failed:', error); // <-- Add this log
         res.status(500).json({ message: 'Authentication failed.' });
+        throw new Error('Invalid token payload'); // This is the error you are seeing
     }
 };
