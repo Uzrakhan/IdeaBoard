@@ -4,6 +4,7 @@ import Room, { IRoom, IPopulatedRoomMember } from '../models/Room';
 import User, { IUser } from '../models/User';
 import { io, connectedUsers } from '../server';
 
+
 const generateUniqueRoomCode = async (): Promise<string> => {
     let code: string;
     let roomExists: IRoom | null;

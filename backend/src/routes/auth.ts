@@ -3,15 +3,19 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import User from '../models/User';
 import { body, validationResult } from 'express-validator';
+import dotenv from 'dotenv'
+import { googleLogin } from '../controllers/authController';
 
-
+dotenv.config();
 const router = express.Router();
 
+
 // --- TEMPORARY DIAGNOSTIC ROUTE  ---//
-router.post('/test-subroute', (req: express.Request,res: express.Response) => {
-    console.log('[DIAGNOSTIC AUTH ROUTER] Hit temporary /test-subroute!');
-    res.status(200).json({ message: 'Auth sub-route hit successfully!' });
+router.get('/test-subroute', (req: express.Request,res: express.Response) => {
+    console.log('[Server] /test-route was hit successfully!');
+    res.status(200).json({ message: 'Test route is working!' });
 })
+
 //validation rules for username & password
 const usernameValidationRules = [
     body('username', 'Username is required.').not().isEmpty(),
@@ -30,6 +34,11 @@ const passwordValidationRules = [
     body('password', 'Password must include at least one number.').matches(/[0-9]/),
     body('password', 'Password must include at least one special character.').matches(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/)
 ]
+
+router.get("/test-route", (req: any, res: any) => {
+  res.send("✅ Test route from auth router works!");
+})
+
 
 
 router.post('/signup', [...usernameValidationRules, ...passwordValidationRules],
@@ -98,6 +107,9 @@ router.post('/login', [
             return res.status(400).json({message: 'Invalid credentials.'})
         }
 
+        if (!user.password) {
+            return res.status(400).json({ message: 'This account uses Google login. Please sign in with Google.' });
+        }
         //validate password
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
@@ -115,12 +127,20 @@ router.post('/login', [
             expiresIn: '1d'
         });
 
-        res.json({token, userId: user._id, username: user.username})
+        res.json({
+            token, 
+            user: {
+                _id: user._id, 
+                username: user.username
+            }
+        })
     }catch(err: any) {
         console.error('Login error:', err.message);
         res.status(500).json({ message: 'Server error' });
     }
 });
+
+router.post('/google', googleLogin);
 
 
 export default router;
