@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+//import { useNavigate } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import { api } from '../api'
 import { useAuth } from '../context/AuthContext';
@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext';
 const GoogleAuthButton:React.FC = () => {
     // to remember who logged-in
     //const [user,setUser] = useState(null);
-    const navigate = useNavigate();
+    //const navigate = useNavigate();
     const { login: authLogin } = useAuth();
 
     //this hook runs only once when the component loads
@@ -35,7 +35,8 @@ const GoogleAuthButton:React.FC = () => {
 
             if (user && token) {
                 await authLogin(token, user);
-                navigate('/');
+                //navigate('/');
+                window.location.href = '/'
             } else {
                 console.error('Login failed: User data not found in response.');
                 alert('Login failed. Please try again.');
