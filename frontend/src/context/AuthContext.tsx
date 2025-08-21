@@ -3,8 +3,9 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 export interface User {
   _id: string;
   username: string;
-  // Add an optional 'name' property for Google users
-  name?: string;
+  name?: string;     // for Google users
+  email?: string;    // Google only
+  picture?: string;  // Google only
 }
 
 export interface AuthContextType {

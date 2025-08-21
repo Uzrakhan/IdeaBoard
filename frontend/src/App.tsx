@@ -1,5 +1,3 @@
-// App.tsx (Fixed)
-
 import React, { useState, useEffect } from 'react';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/ReactToastify.css';
