@@ -14,6 +14,7 @@ export interface AuthContextType {
   login: (token: string, userData: any) => Promise<void>;
   logout: () => void;
   currentUser: User | null;
+  loading: boolean;
 }
 
 interface AuthProviderProps {
@@ -66,6 +67,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     logout,
     currentUser: user,
+    loading: false
   };
 
   return (

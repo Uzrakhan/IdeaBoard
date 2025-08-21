@@ -11,7 +11,7 @@ import { getRoom } from './api';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Home from './components/Home';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
@@ -26,18 +26,19 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 };
 
 const App: React.FC = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { isAuthenticated, loading } = useAuth()
   const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
-  const [loadingAuth, setLoadingAuth] = useState(true);
+  //const [loadingAuth, setLoadingAuth] = useState(true);
 
+  /*
   useEffect(() => {
     const token = localStorage.getItem('token');
-    const userId = localStorage.getItem('userId');
-    setIsAuthenticated(!!token && !!userId);
+    const user = localStorage.getItem('user');
+    isAuthenticated(!!token && !!user);
     setLoadingAuth(false);
   }, []);
-
-  if (loadingAuth) return <div className="app-loading">Loading...</div>;
+  */
+  if (loading) return <div className="app-loading">Loading...</div>;
 
   const onRoomCreated = (room: Room) => {
     setCurrentRoom(room);
