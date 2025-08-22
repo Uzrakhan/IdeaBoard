@@ -28,13 +28,12 @@ api.interceptors.request.use(config => {
 // Helper to log errors
 const handleError = (error: any) => {
   console.error('⚠️ API Error - Full details:', error);
-  if (error.response) {
-    console.error('📡 Response error:', {
-      status: error.response.status,
-      data: error.response.data,
-      headers: error.response.headers,
-      config: error.config
-    });
+  if (error.response && error.response.status === 401) {
+    console.error('Session expired or token is invalid. Logging out...');
+    // ✅ Log the user out and redirect
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = '/auth'; 
   } else if (error.request) {
     console.error('❌ No response received:', error.request);
   } else {
