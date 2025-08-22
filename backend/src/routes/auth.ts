@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 import User from '../models/User';
 import { body, validationResult } from 'express-validator';
 import dotenv from 'dotenv'
-import { googleLogin } from '../controllers/authController';
+import { googleLogin } from '../controllers/googleAuthController';
 
 dotenv.config();
 const router = express.Router();

@@ -71,7 +71,7 @@ export const googleLogin = async (req: express.Request, res: express.Response) =
         // this is a new toke for your app
         const token = jwt.sign(
             { 
-                userId: user.get('_id'), 
+                id: user.get('_id'), 
                 email: user.get('email'), 
                 name: user.get('name') 
             },
