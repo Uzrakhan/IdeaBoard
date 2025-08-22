@@ -33,7 +33,7 @@ const handleError = (error: any) => {
     // ✅ Log the user out and redirect
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    window.location.href = '/auth'; 
+    //window.location.href = '/auth'; 
   } else if (error.request) {
     console.error('❌ No response received:', error.request);
   } else {
