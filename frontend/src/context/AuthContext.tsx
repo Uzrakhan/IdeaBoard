@@ -24,9 +24,10 @@ interface AuthProviderProps {
 export const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(!!localStorage.getItem('token'));
   const [user, setUser] = useState<User | null>(null);
 
+  /*
   useEffect(() => {
     // Check for both the token and the user object on component mount
     const token = localStorage.getItem('token');
@@ -45,9 +46,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       logout();
     }
   }, []);
+  */
+ 
+  useEffect(() => {
+    const storedToken = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
 
+    if (storedToken && storedUser) {
+      try {
+          const parsedUser = JSON.parse(storedUser);
+          setUser(parsedUser);
+          // No need to set isAuthenticated here, as it's already done in useState
+      } catch (e) {
+          console.error("Failed to parse user from localStorage", e);
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setIsAuthenticated(false);
+          setUser(null);
+      }
+    }
+  }, []);
+
+  
   // ✅ The login function now accepts a single user object
-  const login = async (token: string, userData: any) => {
+  const login = async (token: string, userData: any): Promise<void> => {
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(userData));
     setIsAuthenticated(true);

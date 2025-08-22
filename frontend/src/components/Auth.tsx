@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { login, signup } from '../api';
 import { useAuth } from '../context/AuthContext';
 import GoogleAuthButton from './GoogleAuthButton';
@@ -10,7 +11,12 @@ const Auth: React.FC = () => {
     const [password, setPassword] = useState('');
     const [message, setMessage] = useState('');
     const navigate = useNavigate();
+    const location = useLocation();
     const { login: authLogin } = useAuth();
+
+    // Get the path the user was originally trying to access
+    const from = location.state?.from?.pathname || '/';
+
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -33,7 +39,7 @@ const Auth: React.FC = () => {
                     }
                     */
                     authLogin(response.data.token, response.data.user);
-                    navigate('/');
+                    navigate(from, { replace: true });
                 } else {
                     setMessage('Login failed: User data not found.');
                 }
@@ -116,7 +122,7 @@ const Auth: React.FC = () => {
                     </div>
                 </div>
                 <div className='mt-6 flex justify-center'>
-                    <GoogleAuthButton />
+                    <GoogleAuthButton redirectTo={from}/>
                 </div>
             </div>
         </div>

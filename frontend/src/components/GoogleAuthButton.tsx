@@ -4,8 +4,12 @@ import { GoogleLogin } from '@react-oauth/google';
 import { api } from '../api'
 import { useAuth } from '../context/AuthContext';
 
+interface GoogleAuthButtonProps {
+    redirectTo: string;
+}
 
-const GoogleAuthButton:React.FC = () => {
+
+const GoogleAuthButton:React.FC<GoogleAuthButtonProps> = ({ redirectTo }) => {
     // to remember who logged-in
     //const [user,setUser] = useState(null);
     const navigate = useNavigate();
@@ -35,7 +39,7 @@ const GoogleAuthButton:React.FC = () => {
 
             if (user && token) {
                 await authLogin(token, user);
-                navigate('/');
+                navigate(redirectTo, { replace: true });
                 //window.location.href = '/'
             } else {
                 console.error('Login failed: User data not found in response.');
