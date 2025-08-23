@@ -6,11 +6,15 @@ import RoomAdminPanel from './RoomAdminPanel';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getRoom } from '../api';
 import { toast } from 'react-toastify';
+import { Pen, Eraser, Circle, RectangleHorizontal  } from 'lucide-react';
 
 type Point = { x: number; y: number };
 type DrawingLine = {
     id: string;
-    points: Point[];
+    type: 'pen' | 'eraser' | 'rectangle' | 'circle';
+    points?: Point[];
+    startPoint?: Point;
+    endPoint?: Point;
     color: string;
     width: number;
 };
@@ -32,6 +36,12 @@ const Whiteboard: React.FC = () => {
     //const redrawTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const ctxRef = useRef<CanvasRenderingContext2D | null>(null); // Initialize ctxRef
     const [canvasDimensions, setCanvasDimensions] = useState({ width: 0, height: 0 }); // This state is actually for the <canvas> attributes
+
+    // to tarck which tool is active
+    const [activeTool,setActiveTool] = useState<'pen' | 'eraser' | 'rectangle' | 'circle'>('pen');
+
+    // for shape
+    const startPointRef = useRef<Point | null>(null)
 
     const { currentUser } = useAuth();
 
@@ -106,7 +116,20 @@ const Whiteboard: React.FC = () => {
     // --- Drawing Utility Functions (useCallback for stability) ---
 
     // Define drawLine outside of useEffect so it's stable
+    // AS THERES NO NEED OF THIS CALLBACK, HENCE WE WILL BE COMMENTING IT OUT.
+    // THE redrawCanvas function now handles and contains all necessary logic to drawing both lines & shapes.
+    //HENCE, THE SEPARATE drawLine IS REDUNDANT.
+    /*
     const drawLine = useCallback((ctx: CanvasRenderingContext2D, line: DrawingLine) => {
+
+        // Check if the 'line.points' array exists and has at least two points for a line
+        if (!line.points || line.points.length < 2) {
+            // Handle shapes or lines with insufficient points
+            // You can add logic here to draw shapes if needed, or simply return
+            // For now, let's just handle the pencil/pen logic.
+            return;
+        }
+
         if (line.points.length === 0) {
             console.warn(`--- DRAWLINE: Line ID ${line.id} has no points, skipping draw. ---`);
             return;
@@ -127,6 +150,7 @@ const Whiteboard: React.FC = () => {
         ctx.stroke();
         console.log(`--- DRAWLINE: Line ${line.id} stroke completed. ---`);
     }, []); // No dependencies, as it only uses its arguments
+    */
 
     // Define redrawCanvas outside of useEffect so it's stable
     const redrawCanvas = useCallback(() => {
@@ -139,12 +163,48 @@ const Whiteboard: React.FC = () => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         console.log("--- CANVAS: redrawCanvas: Canvas cleared. ---");
         console.log(`--- CANVAS: redrawCanvas: Attempting to draw ${linesRef.current.length} lines. ---`);
-        linesRef.current.forEach((line, index) => {
-            console.log(`--- CANVAS: redrawCanvas: Drawing line ${index + 1}/${linesRef.current.length} (ID: ${line.id}, Points: ${line.points.length}) ---`);
-            drawLine(ctx, line);
+        linesRef.current.forEach((line) => {
+            // Apply common styles before the type-specific logic
+            ctx.lineWidth = line.width;
+            ctx.strokeStyle = line.color;
+
+            switch (line.type) {
+                case 'pen':
+                case 'eraser':
+                    // Check for a valid points array before drawing
+                    if (line.points && line.points.length >= 2) {
+                        ctx.beginPath();
+                        ctx.lineCap = 'round';
+                        ctx.lineJoin = 'round';
+                        ctx.moveTo(line.points[0].x, line.points[0].y);
+                        for (let i = 1; i < line.points.length; i++) {
+                            ctx.lineTo(line.points[i].x, line.points[i].y);
+                        }
+                        ctx.stroke();
+                    }
+                break;
+                case 'rectangle':
+                case 'circle':
+                    // Check that startPoint and endPoint exist before drawing shapes
+                    if (line.startPoint && line.endPoint) {
+                        ctx.beginPath();
+                        if (line.type === "rectangle") {
+                            const width = line.endPoint.x - line.startPoint.x;
+                            const height = line.endPoint.y - line.startPoint.y;
+                            ctx.strokeRect(line.startPoint.x, line.startPoint.y, width, height);
+                        } else if (line.type === "circle") {
+                            const dx = line.endPoint.x - line.startPoint.x;
+                            const dy = line.endPoint.y - line.startPoint.y;
+                            const radius = Math.sqrt(dx * dx + dy * dy);
+                            ctx.arc(line.startPoint.x, line.startPoint.y, radius,0, 2 * Math.PI);
+                            ctx.stroke()
+                        }
+                    }
+                break;
+            }
         });
         console.log("--- CANVAS: redrawCanvas: Finished redrawing all lines. ---");
-    }, [drawLine]); // Depends on drawLine
+    }, []); // Depends on drawLine
 
 
     // Define initCanvas outside of useEffect, using useCallback for stability
@@ -227,12 +287,10 @@ const Whiteboard: React.FC = () => {
         };
 
         const handleDraw = (line: DrawingLine) => {
-            console.log("--- FRONTEND: Received remote draw event! ---", line.id, line.points.length);
             const existingLineIndex = linesRef.current.findIndex(l => l.id === line.id);
 
             if (existingLineIndex !== -1) {
                 linesRef.current[existingLineIndex] = line;
-                console.log("--- FRONTEND: Updated existing line in linesRef.current. New points count:", linesRef.current[existingLineIndex].points.length);
             } else {
                 linesRef.current = [...linesRef.current, line];
                 console.log("--- FRONTEND: Added new line to linesRef.current. Total lines:", linesRef.current.length);
@@ -374,23 +432,25 @@ const Whiteboard: React.FC = () => {
 
         setIsDrawing(true);
         const point = getCoordinates(e);
-        lastPointRef.current = point;
 
-        const newLine: DrawingLine = {
-            id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
-            points: [point],
-            color: colorRef.current,
-            width: brushSizeRef.current
-        };
+        if(activeTool === "pen" || activeTool === "eraser") {
+            const newLine: DrawingLine = {
+                id: Date.now().toString() + Math.random().toString(36).substring(2,9),
+                type: activeTool,
+                points: [point],
+                color: activeTool === "eraser" ? '#FFFFFF' : colorRef.current,
+                width: brushSizeRef.current
+            };
+            linesRef.current = [...linesRef.current, newLine];
+            lastPointRef.current = point;
 
-        linesRef.current = [...linesRef.current, newLine];
-        console.log("FRONTEND: Initial line added to linesRef:", linesRef.current.length, linesRef.current[linesRef.current.length - 1].id);
-
-        if (room && socket.connected) {
-            socket.emit('draw', newLine, room.roomCode);
-            console.log('*** SOCKET: Emitted initial line! ***', newLine.id);
-        } else {
-            console.warn("Attempted to draw but room not loaded or socket not connected.");
+            console.log("FRONTEND: Initial line added to linesRef:", linesRef.current.length, linesRef.current[linesRef.current.length - 1].id);
+            if (room && socket.connected) {
+                socket.emit('draw', newLine, room.roomCode);
+                console.log('*** SOCKET: Emitted initial line! ***', newLine.id);
+            }
+        } else if(activeTool === 'rectangle' || activeTool === 'circle'){
+            startPointRef.current = point;
         }
     };
 
@@ -402,10 +462,13 @@ const Whiteboard: React.FC = () => {
         console.log(`DEBUG DRAW CHECK: canDraw=${canDraw}, isDrawing=${isDrawing}, lastPointRef.current=${lastPointRef.current ? 'true' : 'false'}`);
          // --- END NEW LOGS ---
 
+        /*
         if (!canDraw || !isDrawing || !lastPointRef.current) {
             console.warn("DRAW Function: Early exit due to drawing state conditions."); // <-- NEW LOG
             return; 
         }
+        */
+        if (!canDraw || !isDrawing) return;
 
         console.log('*** EVENT: draw (mousemove/touchmove) triggered! ***', e.type);
 
@@ -423,59 +486,86 @@ const Whiteboard: React.FC = () => {
 
         const point = getCoordinates(e);
 
-        ctx.beginPath();
-        ctx.lineWidth = brushSizeRef.current;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.strokeStyle = colorRef.current;
-        ctx.moveTo(lastPointRef.current.x, lastPointRef.current.y);
-        ctx.lineTo(point.x, point.y);
-        ctx.stroke();
-        console.log('*** CANVAS: Local drawing stroke performed! ***');
-
-        // --- NEW LOGS HERE ---
-        console.log(`DEBUG DRAW CHECK: linesRef.current.length=${linesRef.current.length}`);
-        // --- END NEW LOGS ---
-
-        if (linesRef.current.length > 0) {
+        if (activeTool === "pen"|| activeTool === "eraser") {
             const lastLine = linesRef.current[linesRef.current.length - 1];
+
+            // Ensure lastLine exists and has a points array
+            if (!lastLine || !lastLine.points) {
+                console.warn("DRAW Function: Cannot update line. Last line is not a pen/eraser line or has no points.");
+                return;
+            }
+
+            // Correctly update the points array
             const updatedLine: DrawingLine = {
                 ...lastLine,
                 points: [...lastLine.points, point]
             };
-
-            linesRef.current = [
-                ...linesRef.current.slice(0, -1),
-                updatedLine
-            ];
-
-            // --- NEW LOGS HERE ---
-            console.log(`DEBUG DRAW CHECK: room=${room ? 'true' : 'false'}, socket.connected=${socket.connected}`);
-            // --- END NEW LOGS ---
-
-
+            linesRef.current[linesRef.current.length - 1] = updatedLine;
+            ctx.beginPath();
+            ctx.lineWidth = brushSizeRef.current;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.strokeStyle = activeTool === 'eraser' ? '#FFFFFF' : colorRef.current;
+            ctx.moveTo(lastPointRef.current!.x, lastPointRef.current!.y);
+            ctx.lineTo(point.x, point.y);
+            ctx.stroke();
+            console.log('*** CANVAS: Local drawing stroke performed! ***');
             if (room && socket.connected) {
                 socket.emit('draw', updatedLine, room.roomCode);
-                console.log('*** SOCKET: Emitted updated line segment! ***', updatedLine.id, updatedLine.points.length);
-            } else{
-                console.warn("DRAW Function: Socket emit skipped - room not loaded or socket not connected for update."); // <-- NEW LOG
+                lastPointRef.current = point;
             }
-        }else {
-            console.warn("DRAW Function: linesRef.current is empty, cannot update last line."); // <-- NEW LOG
-        }
+        }else if(activeTool === 'rectangle' || activeTool === 'circle'){
+                // Redraw canvas with temporary shape for real-time feedback
+                redrawCanvas();
+                ctx.beginPath();
+                ctx.strokeStyle = colorRef.current;
+                ctx.lineWidth = brushSizeRef.current;
 
+                if (activeTool === 'rectangle') {
+                    const width = point.x - startPointRef.current!.x;
+                    const height = point.y - startPointRef.current!.y;
+                    ctx.strokeRect(startPointRef.current!.x, startPointRef.current!.y, width, height);
+                } else if (activeTool === 'circle') {
+                    const dx = point.x - startPointRef.current!.x;
+                    const dy = point.y - startPointRef.current!.y;
+                    const radius = Math.sqrt(dx * dx + dy * dy);
+                    ctx.arc(startPointRef.current!.x, startPointRef.current!.y, radius, 0, 2 * Math.PI);
+                    ctx.stroke();
+                }
+            }
+            // ✅ The crucial fix: Always update lastPointRef.current at the end of the function
         lastPointRef.current = point;
     };
 
     // Stop drawing
     const endDrawing = () => {
         console.log('DEBUG: Event Handler Triggered: endDrawing');
-        if (!canDraw) { // Add this line if it's not there
+        if (!canDraw || !isDrawing) { // Add this line if it's not there
             return;
         }
         console.log('*** EVENT: endDrawing triggered! ***');
+
+        if (activeTool === 'rectangle' || activeTool === 'circle') {
+            if (!startPointRef.current || !lastPointRef.current) return;
+            const newShape: DrawingLine = {
+                id: Date.now().toString(),
+                type: activeTool,
+                startPoint: startPointRef.current,
+                endPoint: lastPointRef.current,
+                color: colorRef.current,
+                width: brushSizeRef.current
+            };
+            linesRef.current = [...linesRef.current, newShape];
+
+            // ✅ Add a null check for 'room' before attempting to use it
+            if (room && socket.connected) {
+                socket.emit('draw', newShape, room.roomCode)
+            }
+            redrawCanvas(); // Draw the new, final shape
+        }
         setIsDrawing(false);
         lastPointRef.current = null;
+        startPointRef.current = null;
     };
 
     // Clear the board
@@ -614,16 +704,41 @@ const Whiteboard: React.FC = () => {
                             <>
                                 <div className="flex items-center space-x-2">
                                     <button
-                                        onClick={() => setColor('#000000')}
-                                        className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center shadow-sm hover:border-indigo-500 transition-colors"
-                                        style={{ backgroundColor: '#000000' }}
+                                        onClick={() => { 
+                                            setColor('#000000')
+                                            setActiveTool('pen');
+                                        }}
+                                        className={`p-2 rounded ${activeTool === 'pen' ? 'bg-indigo-200' : 'bg-gray-200'}`}
                                         title="Black Pen"
-                                    ></button>
+                                    >
+                                        <Pen className="w-5 h-5 text-gray-700" />
+                                    </button>
                                     <button
-                                        onClick={() => setColor('#FFFFFF')}
-                                        className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center bg-white shadow-sm hover:border-indigo-500 transition-colors"
+                                        onClick={() => {
+                                            setColor('#FFFFFF')
+                                            setActiveTool('pen');
+                                        }}
+                                        className={`p-2 rounded ${activeTool === 'eraser' ? 'bg-indigo-200' : 'bg-gray-200'}`}
                                         title="Eraser (White)"
-                                    ></button>
+                                    >
+                                        <Eraser className="w-5 h-5 text-gray-700" />
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setActiveTool('rectangle')
+                                        }}
+                                        className={`p-2 rounded ${activeTool === 'rectangle' ? 'bg-indigo-200' : 'bg-gray-200'}`}
+                                        title='Rectangle Tool'
+                                    >
+                                        <RectangleHorizontal className="w-5 h-5 text-gray-700" />
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveTool('circle')}
+                                        className={`p-2 rounded ${activeTool === 'circle' ? 'bg-indigo-200' : 'bg-gray-200'}`}
+                                        title="Circle Tool"
+                                    >
+                                        <Circle className="w-5 h-5 text-gray-700" />
+                                    </button>
                                     <input
                                         type='color'
                                         value={color}
