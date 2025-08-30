@@ -716,7 +716,7 @@ const Whiteboard: React.FC = () => {
                                     <button
                                         onClick={() => {
                                             setColor('#FFFFFF')
-                                            setActiveTool('pen');
+                                            setActiveTool('eraser');
                                         }}
                                         className={`p-2 rounded ${activeTool === 'eraser' ? 'bg-indigo-200' : 'bg-gray-200'}`}
                                         title="Eraser (White)"
