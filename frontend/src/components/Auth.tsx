@@ -57,8 +57,9 @@ const Auth: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-700 font-inter">
-            <div className="bg-gray-100 p-4 rounded-lg shadow-lg w-full max-w-md">
+        <div className="min-h-screen flex items-center justify-center bg-gray-700 font-inter p-1">
+            {/* The main container for the modal */}
+            <div className="bg-gray-100 p-4 rounded-lg shadow-lg w-full max-w-sm">
                 <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
                     {isLogin ? 'Login' : 'Sign Up'}
                 </h2>
