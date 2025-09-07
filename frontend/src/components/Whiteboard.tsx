@@ -33,6 +33,8 @@ const Whiteboard: React.FC = () => {
     const brushSizeRef = useRef(brushSize);
     const lastPointRef = useRef<Point | null>(null);
     const linesRef = useRef<DrawingLine[]>([]);
+    const historyRef = useRef<DrawingLine[][]>([]); // A stack of drawing states
+    const historyRefIndex = useRef<number>(0)
     //const redrawTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const ctxRef = useRef<CanvasRenderingContext2D | null>(null); // Initialize ctxRef
     const [canvasDimensions, setCanvasDimensions] = useState({ width: 0, height: 0 }); // This state is actually for the <canvas> attributes
@@ -561,7 +563,20 @@ const Whiteboard: React.FC = () => {
             if (room && socket.connected) {
                 socket.emit('draw', newShape, room.roomCode)
             }
-            redrawCanvas(); // Draw the new, final shape
+
+            // NEW HISTORY LOGIC
+            // If the history is not at the end, truncate it before adding the new state
+            historyRef.current = historyRef.current.slice(0, historyRefIndex.current + 1);
+
+            // Push the new state onto the history stack
+            historyRef.current.push(JSON.parse(JSON.stringify(linesRef.current)));
+
+            // Update the history index
+            historyRefIndex.current = historyRef.current.length - 1;
+
+            if (activeTool === 'rectangle' || activeTool === 'circle') {
+                redrawCanvas();
+            }
         }
         setIsDrawing(false);
         lastPointRef.current = null;
@@ -641,6 +656,31 @@ const Whiteboard: React.FC = () => {
         );
     };
 
+    const handleUndo = () => {
+        if (historyRefIndex.current > 0) {
+            const newIndex = historyRefIndex.current - 1;
+            historyRefIndex.current = newIndex;
+            linesRef.current = JSON.parse(JSON.stringify(historyRef.current[newIndex]));
+            redrawCanvas();
+            // Optionally, emit an undo event to other clients
+            if (room && socket.connected) {
+                socket.emit('undo', room.roomCode)
+            }
+        }
+    }
+
+    const handleRedo = () => {
+        if (historyRefIndex.current < historyRef.current.length - 1) {
+            const newIndex = historyRefIndex.current + 1;
+            historyRefIndex.current = newIndex;
+            linesRef.current = JSON.parse(JSON.stringify(historyRef.current[newIndex]));
+            redrawCanvas();
+            // Optionally, emit a redo event to other clients
+            if (room && socket.connected) {
+                socket.emit('redo', room.roomCode);
+            }
+        }
+    }
 
     if (!room) {
         if (error) {
@@ -764,16 +804,22 @@ const Whiteboard: React.FC = () => {
                                 <div className='flex items-center space-x-2'>
                                     {/* Undo/Redo - Placeholders */}
                                     <button
+                                        onClick={handleUndo}
                                         className='bg-gray-200 hover:bg-gray-300 w-8 h-8 rounded flex items-center justify-center text-gray-700 text-lg font-bold'
                                         title="Undo"
+                                        // Disable the button if at the start of history
+                                        disabled={historyRefIndex.current === 0}
                                     >
-                                        <span>↺</span>
+                                        <span>↩️</span>
                                     </button>
                                     <button
+                                        onClick={handleRedo}
                                         className='bg-gray-200 hover:bg-gray-300 w-8 h-8 rounded flex items-center justify-center text-gray-700 text-lg font-bold'
                                         title="Redo"
+                                        // Disable the button if at the end of history
+                                        disabled={historyRefIndex.current === historyRef.current.length - 1}
                                     >
-                                        <span>↻</span>
+                                        <span>↪️</span>
                                     </button>
                                     <button
                                         className='bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm font-medium shadow-md'
