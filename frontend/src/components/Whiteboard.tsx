@@ -660,28 +660,20 @@ const Whiteboard: React.FC = () => {
     };
 
     const handleUndo = () => {
-        if (historyRefIndex.current > 0) {
-            const newIndex = historyRefIndex.current - 1;
-            historyRefIndex.current = newIndex;
-            linesRef.current = JSON.parse(JSON.stringify(historyRef.current[newIndex]));
-            redrawCanvas();
-            // Optionally, emit an undo event to other clients
-            if (room && socket.connected) {
-                socket.emit('undo', room.roomCode)
-            }
+        if (room && socket.connected && historyRefIndex.current > 0) {
+            socket.emit('undo', room.roomCode)
+            console.log(`CLIENT: Emitting 'undo' for room ${room.roomCode}`)
+        }else {
+            console.log(`CLIENT: Undo not possible.Index is ${historyRefIndex.current} or not connected.`)
         }
     }
 
     const handleRedo = () => {
-        if (historyRefIndex.current < historyRef.current.length - 1) {
-            const newIndex = historyRefIndex.current + 1;
-            historyRefIndex.current = newIndex;
-            linesRef.current = JSON.parse(JSON.stringify(historyRef.current[newIndex]));
-            redrawCanvas();
-            // Optionally, emit a redo event to other clients
-            if (room && socket.connected) {
-                socket.emit('redo', room.roomCode);
-            }
+        if (room && socket.connected && historyRefIndex.current < historyRef.current.length - 1) {
+            socket.emit('redo', room.roomCode);
+            console.log(`CLIENT: Emitting 'redo' for room ${room.roomCode}`)
+        }else{
+            console.log(`CLIENT: Redo not possible. Index is ${historyRefIndex.current} or not connected.`)
         }
     }
 
