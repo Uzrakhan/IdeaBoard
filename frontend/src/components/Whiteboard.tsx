@@ -284,7 +284,10 @@ const Whiteboard: React.FC = () => {
         // Socket.IO Drawing Event Handlers
         const handleInitialState = (lines: DrawingLine[]) => {
             console.log("Socket.IO: Received initial-state:", lines);
-            linesRef.current = lines;
+            linesRef.current = lines; // Update the linesRef with the server's state
+            //re-sync local history with the server's state
+            historyRef.current = [JSON.parse(JSON.stringify(lines))];
+            historyRefIndex.current = 0;
             redrawCanvas();
         };
 
