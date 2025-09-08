@@ -558,7 +558,7 @@ io.on('connection', (socket: Socket) => { // 'socket' here will infer type corre
         roomData.historyIndex--;
         roomData.drawingLines = history[roomData.historyIndex];
         await saveRoomData(roomCode, roomData);
-        io.to(roomCode).emit('inital-state', roomData.drawingLines);
+        io.to(roomCode).emit('initial-state', roomData.drawingLines);
         console.log(`Undo action broadcasted for room ${roomCode}. New history index: ${roomData.historyIndex}`);
       }
     }catch(err) {
