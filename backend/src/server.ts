@@ -578,18 +578,29 @@ io.on('connection', (socket: Socket) => { // 'socket' here will infer type corre
   });
 
   socket.on('undo', async (roomCode: string) => {
-    try{
+    try {
       const roomData = await getRoomData(roomCode);
-      const { history, historyIndex } = roomData;
-      if (historyIndex > 0) {
-        roomData.historyIndex--;
-        roomData.drawingLines = history[roomData.historyIndex];
-        await saveRoomData(roomCode, roomData);
-        io.to(roomCode).emit('initial-state', roomData.drawingLines);
-        console.log(`Undo action broadcasted for room ${roomCode}. New history index: ${roomData.historyIndex}`);
+
+      // Check if there is anything to undo
+      if (roomData.history.length > 0) {
+          // Remove the last line from the history array
+          roomData.history.pop();
+          
+          // This is the correct way to update the drawing state
+          roomData.drawingLines = roomData.history[roomData.history.length - 1] || [];
+          
+          // Save the updated room data
+          await saveRoomData(roomCode, roomData);
+
+          // Broadcast the new drawing lines to all clients in the room
+          io.to(roomCode).emit('initial-state', roomData.drawingLines);
+          
+          console.log(`Undo action processed for room ${roomCode}. New history length: ${roomData.history.length}`);
+      } else {
+          console.log(`SERVER: Undo not possible for room ${roomCode}. History is empty.`);
       }
-    }catch(err) {
-      console.error('DB write error (undo) for room', roomCode, ":", err);
+    } catch(err) {
+        console.error('DB write error (undo) for room', roomCode, ":", err);
     }
   });
 
