@@ -497,10 +497,7 @@ io.on('connection', (socket: Socket) => { // 'socket' here will infer type corre
       // Example (requires you to fetch room from DB and check member status):
       
       const roomData = await getRoomData(roomCode); //await it immediately
-      const { drawingLines,history, historyIndex } = roomData; 
-
-      // Truncate the history to remove any undone states before adding a new one
-      roomData.history = history.slice(0, historyIndex + 1);
+      const { drawingLines } = roomData; 
 
       // Logic to find and update/add the line in THIS room's drawingLines
       // (This specific findIndex approach can be improved with a unique `lineId` from client)
@@ -516,9 +513,11 @@ io.on('connection', (socket: Socket) => { // 'socket' here will infer type corre
         console.log(`Added new line ${line.id} to room ${roomCode}`);
       }
 
+      /*
       // Save the new state snapshot to the history
       roomData.history.push(JSON.parse(JSON.stringify(drawingLines)));
       roomData.historyIndex = roomData.history.length - 1;
+      */
 
       await saveRoomData(roomCode, roomData);
       socket.to(roomCode).emit('draw', line);
@@ -529,6 +528,33 @@ io.on('connection', (socket: Socket) => { // 'socket' here will infer type corre
       socket.emit('drawingError', { message: 'Failed to process drawing.', error: err.message });
     }
   });
+
+  socket.on('endDrawing', async(roomCode: string) => {
+    try{
+      const roomData = await getRoomData(roomCode);
+      const { drawingLines, history, historyIndex } = roomData;
+
+      // Truncate history to discard "future" states if an undo was performed
+      roomData.history = history.slice(0, historyIndex + 1);
+
+
+      // Create a deep copy of the final drawing state
+      const snapshot = JSON.parse(JSON.stringify(drawingLines));
+
+      //push the final snapshot to the history and update the index
+      roomData.history.push(snapshot);
+      roomData.historyIndex = roomData.history.length - 1;
+
+      //save the state with the updated history and index
+      await saveRoomData(roomCode, roomData);
+
+      //re-broadcast the full state to all clients
+      io.to(roomCode).emit('initial-state', roomData.drawingLines);
+      console.log(`End drawing action. New history length: ${roomData.history.length}`);
+    }catch(err) {
+      console.error('DB write error (endDrawing):', err);
+    }
+  })
 
   //3. `clear` event
   socket.on('clear', async (roomCode: string) => {
@@ -544,9 +570,10 @@ io.on('connection', (socket: Socket) => { // 'socket' here will infer type corre
       roomData.historyIndex = roomData.history.length - 1;
       
       await saveRoomData(roomCode, roomData);
-      io.to(roomCode).emit('clear');
+      io.to(roomCode).emit('initial-state',roomData.drawingLines);
+      console.log(`Clear action processed. New history length: ${roomData.history.length}`);
     }catch(err) {
-      console.error('DB write error (clear) for room', roomCode, ":", err)
+      console.error('DB write error (clear):', err);
     }
   });
 
