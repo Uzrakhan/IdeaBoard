@@ -26,7 +26,8 @@
         "mongoose": "^8.16.0",
         "passport": "^0.7.0",
         "passport-google-oauth20": "^2.0.0",
-        "socket.io": "^4.8.1"
+        "socket.io": "^4.8.1",
+        "winston": "^3.17.0"
     },
     "devDependencies": {
         "@types/bcryptjs": "^2.4.6",
@@ -40,6 +41,7 @@
         "@types/node": "^22.16.0",
         "@types/socket.io": "^3.0.1",
         "@types/supertest": "^6.0.3",
+        "@types/winston": "^2.4.4",
         "bcryptjs": "^3.0.2",
         "cross-env": "^7.0.3",
         "jest": "^30.0.2",

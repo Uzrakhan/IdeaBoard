@@ -5,6 +5,7 @@ import User from '../models/User';
 import { body, validationResult } from 'express-validator';
 import dotenv from 'dotenv'
 import { googleLogin } from '../controllers/googleAuthController';
+import logger from '../utils/logger';
 
 dotenv.config();
 const router = express.Router();
@@ -43,11 +44,11 @@ router.get("/test-route", (req: any, res: any) => {
 
 router.post('/signup', [...usernameValidationRules, ...passwordValidationRules],
     async (req: express.Request, res: express.Response) => {
-        console.log('[Signup Request] Received body:', req.body);
+        logger.info(`Signup request received for username: ${req.body.username}`)
         //check for validation errors
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            console.error('[Signup Validation Error] Details:', errors.array());
+            logger.warn(`Signup validation failed for username: ${req.body.username}. Errors: ${JSON.stringify(errors.array())}`);
             return res.status(400).json({ errors: errors.array(), message: 'Validation failed.' });
         }
 
@@ -57,7 +58,7 @@ router.post('/signup', [...usernameValidationRules, ...passwordValidationRules],
             //check if user exits
             const existingUser = await User.findOne({ username });
             if (existingUser) {
-                console.warn(`[Signup] Attempted signup for existing username: ${username}`);
+                logger.warn(`Signup attempt failed: Username already exists for ${username}.`);
                 return res.status(400).json({ message: 'Username already exists' });
             }
 
@@ -70,7 +71,7 @@ router.post('/signup', [...usernameValidationRules, ...passwordValidationRules],
             //generate token
             const jwtSecret = process.env.JWT_SECRET;
             if(!jwtSecret) {
-                console.error('JWT_SECRET is not defined!');
+                logger.error('JWT_SECRET is not defined in the environment variables.');
                 return res.status(500).json({ message: 'Server configuration error.' });
             }
 
@@ -78,10 +79,10 @@ router.post('/signup', [...usernameValidationRules, ...passwordValidationRules],
                 expiresIn: '1d'
             });
 
-            console.log(`[Signup Success] User ${username} created with ID: ${newUser._id}`);
+            logger.info(`New user signed up successfully: ${username}`);
             res.status(201).json({ token, userId: newUser._id, username: newUser.username })
         }catch(err: any) {
-            console.error('Signup error:', err.message); // Log the actual error
+            logger.error(`Signup server error for username: ${username}. Error: ${err.message}`, { error: err });
             res.status(500).json({ message: 'Server error' });
         }
 });
@@ -92,52 +93,57 @@ router.post('/login', [
 ],
     async (req: express.Request, res: express.Response) => {
 
-    console.log('[Backend] Attempting Login for username:', req.body.username);
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array(), message: 'Validation failed.' });
-    }
-
-    const {username, password} = req.body;
-
-    try{
-        //check if user exists
-        const user = await User.findOne({username});
-        if (!user) {
-            return res.status(400).json({message: 'Invalid credentials.'})
+        logger.info(`Login attempt received for username: ${req.body.username}`);
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            logger.warn(`Login validation failed for username: ${req.body.username}.`);
+            return res.status(400).json({ errors: errors.array(), message: 'Validation failed.' });
         }
 
-        if (!user.password) {
-            return res.status(400).json({ message: 'This account uses Google login. Please sign in with Google.' });
-        }
-        //validate password
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            return res.status(400).json({ message: 'Invalid credentials' })
-        }
+        const {username, password} = req.body;
 
-        //generate token
-        const jwtSecret = process.env.JWT_SECRET;
-        if (!jwtSecret) {
-            console.error('JWT_SECRET is not defined!');
-            return res.status(500).json({ message: 'Server configuration error.' });
-        }
-
-        const token = jwt.sign({id: user._id}, process.env.JWT_SECRET as string, {
-            expiresIn: '1d'
-        });
-
-        res.json({
-            token, 
-            user: {
-                _id: user._id, 
-                username: user.username
+        try{
+            //check if user exists
+            const user = await User.findOne({username});
+            if (!user) {
+                logger.warn(`Login attempt failed: User not found for username ${username}`);
+                return res.status(400).json({message: 'Invalid credentials.'})
             }
-        })
-    }catch(err: any) {
-        console.error('Login error:', err.message);
-        res.status(500).json({ message: 'Server error' });
-    }
+
+            if (!user.password) {
+                logger.info(`Login attempt failed: User ${username} tried to use manual login on a Google-only account.`);
+                return res.status(400).json({ message: 'This account uses Google login. Please sign in with Google.' });
+            }
+            //validate password
+            const isMatch = await bcrypt.compare(password, user.password);
+            if (!isMatch) {
+                logger.warn(`Login attempt failed: Invalid password for username ${username}`);
+                return res.status(400).json({ message: 'Invalid credentials' })
+            }
+
+            //generate token
+            const jwtSecret = process.env.JWT_SECRET;
+            if (!jwtSecret) {
+                logger.error('JWT_SECRET is not defined!');
+                return res.status(500).json({ message: 'Server configuration error.' });
+            }
+
+            const token = jwt.sign({id: user._id}, process.env.JWT_SECRET as string, {
+                expiresIn: '1d'
+            });
+
+            logger.info(`Successful login for user: ${username}`);
+            res.json({
+                token, 
+                user: {
+                    _id: user._id, 
+                    username: user.username
+                }
+            })
+        }catch(err: any) {
+            logger.error(`Login server error for username ${req.body.username}: ${err.message}`, { error: err });
+            res.status(500).json({ message: 'Server error' });
+        }
 });
 
 router.post('/google', googleLogin);

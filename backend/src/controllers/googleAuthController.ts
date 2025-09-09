@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import User from '../models/User';
 import express from 'express';
+import logger from '../utils/logger';
 
 dotenv.config()
 
@@ -16,11 +17,12 @@ export const googleLogin = async (req: express.Request, res: express.Response) =
     const { credential } = req.body;
 
     if (!credential) {
+        logger.warn('Google login attempt failed: Credential not provided.')
         return res.status(400).json({ message: 'Credential not provided.' });
     }
 
     try {
-        console.log('Backend received Google credential:', credential); // <-- Add this log
+        logger.info('Received Google credential. Verifying token...')
         const ticket = await client.verifyIdToken({
             idToken: credential,
             audience: process.env.GOOGLE_CLIENT_ID,
@@ -29,6 +31,7 @@ export const googleLogin = async (req: express.Request, res: express.Response) =
         console.log('Google verification successful, payload:', ticket.getPayload()); // <-- Add this log
         const payload = ticket.getPayload();
         if (!payload) {
+            logger.warn('Google verification failed: Invalid token payload.')
             return res.status(401).json({ message: 'Invalid token payload.' });
         }
 
@@ -58,12 +61,12 @@ export const googleLogin = async (req: express.Request, res: express.Response) =
                 avatar: picture,
                 username: name
             });
-            console.log("New user created from Google login:", user.get('name'))
+            logger.info(`New user created from Google login for email: ${user.email}`)
         } else {
             //In else block, we need to craete a new user object
             // we have all data we need from Google payload(userId, email, name, picture)
             // we need to save this user to the db this will involve await
-            console.log('Existing user logged in:', user.get('name'));
+            logger.info(`Existing user logged in with Google: ${user.email}`);
         }
 
         
@@ -91,7 +94,7 @@ export const googleLogin = async (req: express.Request, res: express.Response) =
         });
 
     } catch (error) {
-        console.error('Google login authenticaton failed:', error); // <-- Add this log
+        logger.error('Google login authentication failed.', { error })
         res.status(500).json({ message: 'Authentication failed.' });
     }
 };
