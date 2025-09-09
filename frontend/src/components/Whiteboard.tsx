@@ -659,23 +659,6 @@ const Whiteboard: React.FC = () => {
         );
     };
 
-    const handleUndo = () => {
-        if (room && socket.connected && historyRefIndex.current > 0) {
-            socket.emit('undo', room.roomCode)
-            console.log(`CLIENT: Emitting 'undo' for room ${room.roomCode}`)
-        }else {
-            console.log(`CLIENT: Undo not possible.Index is ${historyRefIndex.current} or not connected.`)
-        }
-    }
-
-    const handleRedo = () => {
-        if (room && socket.connected && historyRefIndex.current < historyRef.current.length - 1) {
-            socket.emit('redo', room.roomCode);
-            console.log(`CLIENT: Emitting 'redo' for room ${room.roomCode}`)
-        }else{
-            console.log(`CLIENT: Redo not possible. Index is ${historyRefIndex.current} or not connected.`)
-        }
-    }
 
     if (!room) {
         if (error) {
@@ -797,25 +780,6 @@ const Whiteboard: React.FC = () => {
                                 </div>
 
                                 <div className='flex items-center space-x-2'>
-                                    {/* Undo/Redo - Placeholders */}
-                                    <button
-                                        onClick={handleUndo}
-                                        className='bg-gray-200 hover:bg-gray-300 w-8 h-8 rounded flex items-center justify-center text-gray-700 text-lg font-bold'
-                                        title="Undo"
-                                        // Disable the button if at the start of history
-                                        disabled={historyRefIndex.current === 0}
-                                    >
-                                        <span>↩️</span>
-                                    </button>
-                                    <button
-                                        onClick={handleRedo}
-                                        className='bg-gray-200 hover:bg-gray-300 w-8 h-8 rounded flex items-center justify-center text-gray-700 text-lg font-bold'
-                                        title="Redo"
-                                        // Disable the button if at the end of history
-                                        disabled={historyRefIndex.current === historyRef.current.length - 1}
-                                    >
-                                        <span>↪️</span>
-                                    </button>
                                     <button
                                         className='bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm font-medium shadow-md'
                                         onClick={clearBoard}
