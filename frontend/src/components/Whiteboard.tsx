@@ -6,7 +6,7 @@ import RoomAdminPanel from './RoomAdminPanel';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getRoom } from '../api';
 import { toast } from 'react-toastify';
-import { Pen, Eraser, Circle, RectangleHorizontal  } from 'lucide-react';
+import { Pen, Eraser, Circle, RectangleHorizontal, PanelRight  } from 'lucide-react';
 
 type Point = { x: number; y: number };
 type DrawingLine = {
@@ -38,7 +38,7 @@ const Whiteboard: React.FC = () => {
     //const redrawTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const ctxRef = useRef<CanvasRenderingContext2D | null>(null); // Initialize ctxRef
     const [canvasDimensions, setCanvasDimensions] = useState({ width: 0, height: 0 }); // This state is actually for the <canvas> attributes
-
+    const [isPanelOpen, setIsPanelOpen] = useState(false); //New state for panel visibility
     // to tarck which tool is active
     const [activeTool,setActiveTool] = useState<'pen' | 'eraser' | 'rectangle' | 'circle'>('pen');
 
@@ -517,7 +517,6 @@ const Whiteboard: React.FC = () => {
             console.log('*** CANVAS: Local drawing stroke performed! ***');
             if (room && socket.connected) {
                 socket.emit('draw', updatedLine, room.roomCode);
-                lastPointRef.current = point;
             }
         }else if(activeTool === 'rectangle' || activeTool === 'circle'){
                 // Redraw canvas with temporary shape for real-time feedback
@@ -785,45 +784,51 @@ const Whiteboard: React.FC = () => {
                                         onClick={clearBoard}
                                         title="Clear Board"
                                     >
-                                        Clear
+                                        Clear Board
                                     </button>
                                 </div>
                             </>
                         )}
-                        {!canDraw && (
-                            <p className="text-gray-500 text-sm italic">
-                                Drawing tools will appear once you are approved by the room owner.
-                            </p>
+                        {isOwner && (
+                            <button
+                                onClick={() => setIsPanelOpen(!isPanelOpen)}
+                                className={`p-2 rounded-lg ml-auto transition-colors ${isPanelOpen ? 'bg-indigo-200 text-indigo-800' : 'bg-gray-200 text-gray-700'}`}
+                                title='Admin Panel'
+                            >
+                                <PanelRight className='w-5 h-5'/>
+                            </button>
+                        )}
+                        {renderDrawingPermissionMessage()}
+                    </div>
+
+                    {/* Main drawing and admin panel area */}
+                    <div className='flex flex-col md:flex-row h-[70vh]'>
+                        <div
+                            ref={containerRef}
+                            className={`relative bg-white rounded-xl shadow-md ${isPanelOpen ? 'md:w-3/4' : 'w-full'} transition-all duration-300 ease-in-out`}
+                        >
+                            <canvas
+                                ref={canvasRef}
+                                className='w-full h-full cursor-crosshair'
+                                onMouseDown={startDrawing}
+                                onMouseMove={draw}
+                                onMouseUp={endDrawing}
+                                onMouseLeave={endDrawing}
+                                onTouchStart={handleTouchStart}
+                                onTouchMove={handleTouchMove}
+                                onTouchEnd={endDrawing}
+                                width={canvasDimensions.width}
+                                height={canvasDimensions.height}
+                            />
+                        </div>
+                        {/* The side panel */}
+                        {isOwner && isPanelOpen && (
+                            <div className="md:w-1/4 md:border-l md:border-gray-200 p-4 overflow-y-auto bg-white rounded-xl shadow-md ml4 mt-4 md:mt-0">
+                                <RoomAdminPanel room={room} setCurrentRoom={setRoom} />
+                            </div>
                         )}
                     </div>
                 </div>
-
-                <div
-                    ref={containerRef}
-                    className="bg-white rounded-xl shadow-md overflow-hidden"
-                    style={{ height: '500px' }}
-                >
-                    <canvas
-                        ref={canvasRef}
-                        onMouseDown={startDrawing}
-                        onMouseMove={draw}
-                        onMouseUp={endDrawing}
-                        onMouseLeave={endDrawing}
-                        onTouchStart={handleTouchStart}
-                        onTouchMove={handleTouchMove}
-                        onTouchEnd={endDrawing}
-                        className={`w-full h-full border border-gray-200 ${canDraw ? 'cursor-crosshair' : 'cursor-not-allowed'}`}
-                        width={canvasDimensions.width}
-                        height={canvasDimensions.height}
-                    />
-                    {renderDrawingPermissionMessage()}
-                </div>
-
-                {isOwner && (
-                    <div className="bg-white rounded-xl shadow-md mt-6 p-4">
-                        <RoomAdminPanel room={room} setCurrentRoom={setRoom} />
-                    </div>
-                )}
             </div>
         </div>
     );
