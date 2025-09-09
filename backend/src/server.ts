@@ -426,8 +426,6 @@ type DrawingLine = {
 // Define the overall LowDB data structure
 type RoomData = {
   drawingLines: DrawingLine [];   // Each room will have its own list of lines
-  history: DrawingLine[][]; //history stack
-  historyIndex: number; //history index
 }
 
 type DbData = { 
@@ -451,7 +449,7 @@ const db = new Low(adapter, { rooms: {} }); // Initialize with an empty rooms ob
 async function getRoomData(roomCode: string): Promise<RoomData> {
   await db.read(); //always read the latest state from the file first!
   if (!db.data!.rooms[roomCode]) {
-    db.data!.rooms[roomCode] = { drawingLines: [], history: [[]], historyIndex: 0 } //create an empty room if it's new  
+    db.data!.rooms[roomCode] = { drawingLines: [] } //create an empty room if it's new  
   }
   return db.data!.rooms[roomCode] //return data for this specific room
 }
@@ -521,7 +519,6 @@ io.on('connection', (socket: Socket) => { // 'socket' here will infer type corre
 
       await saveRoomData(roomCode, roomData);
       socket.to(roomCode).emit('draw', line);
-      console.log(`Draw action processed. New history length: ${roomData.history.length}`);
     }catch (err: any) {
       console.error('DB write/draw processing error for room', roomCode, ':', err);
       // Optionally, emit an error back to the client
@@ -529,96 +526,21 @@ io.on('connection', (socket: Socket) => { // 'socket' here will infer type corre
     }
   });
 
-  socket.on('endDrawing', async(roomCode: string) => {
-    try{
-      const roomData = await getRoomData(roomCode);
-      const { drawingLines, history, historyIndex } = roomData;
-
-      // Truncate history to discard "future" states if an undo was performed
-      roomData.history = history.slice(0, historyIndex + 1);
-
-
-      // Create a deep copy of the final drawing state
-      const snapshot = JSON.parse(JSON.stringify(drawingLines));
-
-      //push the final snapshot to the history and update the index
-      roomData.history.push(snapshot);
-      roomData.historyIndex = roomData.history.length - 1;
-
-      //save the state with the updated history and index
-      await saveRoomData(roomCode, roomData);
-
-      //re-broadcast the full state to all clients
-      io.to(roomCode).emit('initial-state', roomData.drawingLines);
-      console.log(`End drawing action. New history length: ${roomData.history.length}`);
-    }catch(err) {
-      console.error('DB write error (endDrawing):', err);
-    }
-  })
-
   //3. `clear` event
   socket.on('clear', async (roomCode: string) => {
     try{
       const roomData = await getRoomData(roomCode);
 
-      // Truncate history before a new action
-      roomData.history = roomData.history.slice(0, roomData.historyIndex + 1);
-
       // Clear lines and add the new empty state to history
       roomData.drawingLines = [];
-      roomData.history.push([]);
-      roomData.historyIndex = roomData.history.length - 1;
       
       await saveRoomData(roomCode, roomData);
       io.to(roomCode).emit('initial-state',roomData.drawingLines);
-      console.log(`Clear action processed. New history length: ${roomData.history.length}`);
+      console.log(`Clear action processed for room ${roomCode}. Drawing lines are now empty.`);
     }catch(err) {
       console.error('DB write error (clear):', err);
     }
   });
-
-  socket.on('undo', async (roomCode: string) => {
-    try {
-      const roomData = await getRoomData(roomCode);
-
-      // Check if there is anything to undo
-      if (roomData.history.length > 0) {
-          // Remove the last line from the history array
-          roomData.history.pop();
-          
-          // This is the correct way to update the drawing state
-          roomData.drawingLines = roomData.history[roomData.history.length - 1] || [];
-          
-          // Save the updated room data
-          await saveRoomData(roomCode, roomData);
-
-          // Broadcast the new drawing lines to all clients in the room
-          io.to(roomCode).emit('initial-state', roomData.drawingLines);
-          
-          console.log(`Undo action processed for room ${roomCode}. New history length: ${roomData.history.length}`);
-      } else {
-          console.log(`SERVER: Undo not possible for room ${roomCode}. History is empty.`);
-      }
-    } catch(err) {
-        console.error('DB write error (undo) for room', roomCode, ":", err);
-    }
-  });
-
-  socket.on('redo', async (roomCode: string) => {
-    try {
-      const roomData = await getRoomData(roomCode);
-      const { history, historyIndex } = roomData;
-      if (historyIndex < history.length - 1){
-        roomData.historyIndex++;
-        roomData.drawingLines = history[roomData.historyIndex];
-        await saveRoomData(roomCode, roomData);
-        io.to(roomCode).emit('initial-state', roomData.drawingLines);
-        console.log(`Redo action broadcasted for room ${roomCode}. New history index: ${roomData.historyIndex}`);
-      }
-    }catch(err) {
-      console.error('DB write error (redo) for room', roomCode, ":", err);
-    }
-  })
 
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
