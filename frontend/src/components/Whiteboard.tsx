@@ -41,7 +41,7 @@ const Whiteboard: React.FC = () => {
     const [isPanelOpen, setIsPanelOpen] = useState(false); //New state for panel visibility
     // to tarck which tool is active
     const [activeTool,setActiveTool] = useState<'pen' | 'eraser' | 'rectangle' | 'circle'>('pen');
-
+    const [pendingRequestsCount, setPendingRequestsCount] = useState(0); 
     // for shape
     const startPointRef = useRef<Point | null>(null)
 
@@ -363,6 +363,8 @@ const Whiteboard: React.FC = () => {
         socket.on('roomUpdated', ({ room: updatedRoomData }: { room: Room }) => {
             console.log('Socket.IO: Received roomUpdated:', updatedRoomData);
             setRoom(updatedRoomData)
+            const count = updatedRoomData.members.filter(m => m.status === "pending").length;
+            setPendingRequestsCount(count);
         });
 
         socket.on('room:joinRequest', (data: { roomCode: string; requester: string; requesterId: string }) => {
@@ -796,6 +798,11 @@ const Whiteboard: React.FC = () => {
                                 title='Admin Panel'
                             >
                                 <PanelRight className='w-5 h-5'/>
+                                {pendingRequestsCount > 0 && (
+                                    <span className='absolute top-0 right-0 inline-flex items-center justify-center h-4 w-4 text-xs font-bold leading-none text-red-100 transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full'>
+                                        {pendingRequestsCount}
+                                    </span>
+                                )}
                             </button>
                         )}
                         {renderDrawingPermissionMessage()}
