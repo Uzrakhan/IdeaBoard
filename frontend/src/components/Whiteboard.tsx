@@ -73,7 +73,9 @@ const Whiteboard: React.FC = () => {
 
                 if (res) {
                     setRoom(res);
+                    const initalPendingCount = res.members.filter((m: { status: string; }) => m.status === "pending").length;
                     console.log("DEBUG: Whiteboard: Room fetched successfully:", res);
+                    setPendingRequestsCount(initalPendingCount);
                 } else {
                     throw new Error(res?.message || "Room data not found in response.");
                 }
