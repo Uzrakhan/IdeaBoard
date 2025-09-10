@@ -75,7 +75,7 @@ const Whiteboard: React.FC = () => {
                     setRoom(res);
                     const initalPendingCount = res.members.filter((m: { status: string; }) => m.status === "pending").length;
                     console.log("DEBUG: Whiteboard: Room fetched successfully:", res);
-                    setPendingRequestsCount(initalPendingCount);
+                    setPendingRequestsCount(initalPendingCount)
                 } else {
                     throw new Error(res?.message || "Room data not found in response.");
                 }
@@ -794,18 +794,20 @@ const Whiteboard: React.FC = () => {
                             </>
                         )}
                         {isOwner && (
-                            <button
-                                onClick={() => setIsPanelOpen(!isPanelOpen)}
-                                className={`p-2 rounded-lg ml-auto transition-colors ${isPanelOpen ? 'bg-indigo-200 text-indigo-800' : 'bg-gray-200 text-gray-700'}`}
-                                title='Admin Panel'
-                            >
-                                <PanelRight className='w-5 h-5'/>
+                            <div className='relative'>
+                                <button
+                                    onClick={() => setIsPanelOpen(!isPanelOpen)}
+                                    className={`p-2 rounded-lg ml-auto transition-colors ${isPanelOpen ? 'bg-indigo-200 text-indigo-800' : 'bg-gray-200 text-gray-700'}`}
+                                    title='Admin Panel'
+                                >
+                                    <PanelRight className='w-5 h-5'/>
+                                </button>
                                 {pendingRequestsCount > 0 && (
                                     <span className='absolute top-0 right-0 inline-flex items-center justify-center h-4 w-4 text-xs font-bold leading-none text-red-100 transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full'>
                                         {pendingRequestsCount}
                                     </span>
                                 )}
-                            </button>
+                            </div>
                         )}
                         {renderDrawingPermissionMessage()}
                     </div>
