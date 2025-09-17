@@ -408,6 +408,8 @@ const Whiteboard: React.FC = () => {
 
         const canvas = canvasRef.current;
         const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
 
         let clientX, clientY;
         if ('touches' in e) {
@@ -420,8 +422,8 @@ const Whiteboard: React.FC = () => {
 
         // Return coordinates relative to the canvas's CSS size
         return {
-            x: clientX - rect.left,
-            y: clientY - rect.top
+           x: (clientX - rect.left) * scaleX,
+            y: (clientY - rect.top) * scaleY
         };
     };
 
@@ -820,7 +822,7 @@ const Whiteboard: React.FC = () => {
                         >
                             <canvas
                                 ref={canvasRef}
-                                className='w-full h-full cursor-crosshair'
+                                className='w-full h-full cursor-crosshair touch-none'
                                 onMouseDown={startDrawing}
                                 onMouseMove={draw}
                                 onMouseUp={endDrawing}
