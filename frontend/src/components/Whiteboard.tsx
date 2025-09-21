@@ -428,14 +428,12 @@ const Whiteboard: React.FC = () => {
     };
 
     // Start drawing
-    const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
+    const startDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
         console.log(`DEBUG: Event Handler Triggered: startDrawing (type: ${e.type})`);
-
-        //To prevent deafult browser behavior for touch events
-        if ('touches' in e) {
-            e.preventDefault()
-        };
-
+        // Crucial: Use e.preventDefault() to block default browser behavior
+        // and check for the primary pointer to prevent multi-touch issues.
+        e.preventDefault();
+        if (!e.isPrimary) return;
 
         if (!canDraw) {
             toast.warn("You don't have permission to draw yet. Please wait for the room owner to approve your request.");
@@ -473,15 +471,12 @@ const Whiteboard: React.FC = () => {
     };
 
     // Draw while moving
-    const draw = (e: React.MouseEvent | React.TouchEvent) => {
+    const draw = (e: React.PointerEvent<HTMLCanvasElement>) => {
         console.log(`DEBUG: Event Handler Triggered: draw (type: ${e.type})`);
 
         console.log(`DEBUG DRAW CHECK: canDraw=${canDraw}, isDrawing=${isDrawing}, lastPointRef.current=${lastPointRef.current ? 'true' : 'false'}`);
-
-        //To prevent deafult browser behavior for touch events
-        if ('touches' in e) {
-            e.preventDefault()
-        };
+        e.preventDefault();
+        
 
         if (!canDraw || !isDrawing) return;
 
@@ -830,14 +825,11 @@ const Whiteboard: React.FC = () => {
                             <canvas
                                 ref={canvasRef}
                                 className='w-full h-full cursor-crosshair touch-none'
-                                onMouseDown={startDrawing}
-                                onMouseMove={draw}
-                                onMouseUp={endDrawing}
-                                onMouseLeave={endDrawing}
-                                onTouchStart={startDrawing}
-                                onTouchMove={draw}
-                                onTouchEnd={endDrawing}
-                                onTouchCancel={endDrawing}
+                                onPointerDown={startDrawing}
+                                onPointerMove={draw}
+                                onPointerUp={endDrawing}
+                                onPointerLeave={endDrawing} // Recommended for a clean stop
+                                onPointerCancel={endDrawing}
                                 width={canvasDimensions.width}
                                 height={canvasDimensions.height}
                             />
