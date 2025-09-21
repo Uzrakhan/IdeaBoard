@@ -476,7 +476,7 @@ const Whiteboard: React.FC = () => {
 
         console.log(`DEBUG DRAW CHECK: canDraw=${canDraw}, isDrawing=${isDrawing}, lastPointRef.current=${lastPointRef.current ? 'true' : 'false'}`);
         e.preventDefault();
-        
+
 
         if (!canDraw || !isDrawing) return;
 
@@ -824,7 +824,7 @@ const Whiteboard: React.FC = () => {
                         >
                             <canvas
                                 ref={canvasRef}
-                                className='w-full h-full cursor-crosshair touch-none'
+                                className='w-full h-full cursor-crosshair drawing-canvas'
                                 onPointerDown={startDrawing}
                                 onPointerMove={draw}
                                 onPointerUp={endDrawing}
