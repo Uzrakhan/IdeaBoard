@@ -429,7 +429,14 @@ const Whiteboard: React.FC = () => {
 
     // Start drawing
     const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
-        console.log(`DEBUG: Event Handler Triggered: startDrawing (type: ${e.type})`); // <-- ADD THIS LOG
+        console.log(`DEBUG: Event Handler Triggered: startDrawing (type: ${e.type})`);
+
+        //To prevent deafult browser behavior for touch events
+        if ('touches' in e) {
+            e.preventDefault()
+        };
+
+
         if (!canDraw) {
             toast.warn("You don't have permission to draw yet. Please wait for the room owner to approve your request.");
             console.log("Drawing prevented: User does not have permission.");
@@ -467,18 +474,15 @@ const Whiteboard: React.FC = () => {
 
     // Draw while moving
     const draw = (e: React.MouseEvent | React.TouchEvent) => {
-        console.log(`DEBUG: Event Handler Triggered: draw (type: ${e.type})`); // <-- ADD THIS LOG
+        console.log(`DEBUG: Event Handler Triggered: draw (type: ${e.type})`);
 
-        // --- NEW LOGS HERE ---
         console.log(`DEBUG DRAW CHECK: canDraw=${canDraw}, isDrawing=${isDrawing}, lastPointRef.current=${lastPointRef.current ? 'true' : 'false'}`);
-         // --- END NEW LOGS ---
 
-        /*
-        if (!canDraw || !isDrawing || !lastPointRef.current) {
-            console.warn("DRAW Function: Early exit due to drawing state conditions."); // <-- NEW LOG
-            return; 
-        }
-        */
+        //To prevent deafult browser behavior for touch events
+        if ('touches' in e) {
+            e.preventDefault()
+        };
+
         if (!canDraw || !isDrawing) return;
 
         console.log('*** EVENT: draw (mousemove/touchmove) triggered! ***', e.type);
