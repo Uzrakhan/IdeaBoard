@@ -613,6 +613,7 @@ const Whiteboard: React.FC = () => {
         }
     };
 
+    /*
     // Touch event handlers
     const handleTouchStart = (e: React.TouchEvent) => {
         console.log('DEBUG: Event Handler Triggered: handleTouchStart'); // <-- ADD THIS LOG
@@ -632,6 +633,8 @@ const Whiteboard: React.FC = () => {
         e.preventDefault();
         draw(e);
     };
+    */
+
 
     // Display a message if drawing is not allowed
     const renderDrawingPermissionMessage = () => {
@@ -827,9 +830,10 @@ const Whiteboard: React.FC = () => {
                                 onMouseMove={draw}
                                 onMouseUp={endDrawing}
                                 onMouseLeave={endDrawing}
-                                onTouchStart={handleTouchStart}
-                                onTouchMove={handleTouchMove}
+                                onTouchStart={startDrawing}
+                                onTouchMove={draw}
                                 onTouchEnd={endDrawing}
+                                onTouchCancel={endDrawing}
                                 width={canvasDimensions.width}
                                 height={canvasDimensions.height}
                             />
