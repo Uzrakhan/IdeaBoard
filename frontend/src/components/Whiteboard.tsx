@@ -37,14 +37,13 @@ const Whiteboard: React.FC = () => {
     const historyRefIndex = useRef<number>(0)
     //const redrawTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const ctxRef = useRef<CanvasRenderingContext2D | null>(null); // Initialize ctxRef
-    const [canvasDimensions, setCanvasDimensions] = useState({ width: 0, height: 0 }); // This state is actually for the <canvas> attributes
     const [isPanelOpen, setIsPanelOpen] = useState(false); //New state for panel visibility
     // to tarck which tool is active
     const [activeTool,setActiveTool] = useState<'pen' | 'eraser' | 'rectangle' | 'circle'>('pen');
     const [pendingRequestsCount, setPendingRequestsCount] = useState(0); 
     // for shape
     const startPointRef = useRef<Point | null>(null)
-
+    const [isMobile, setIsMobile] = useState(false);
     const { currentUser } = useAuth();
 
     const isOwner = currentUser && room?.owner?._id === currentUser._id;
@@ -58,144 +57,22 @@ const Whiteboard: React.FC = () => {
     console.log('Current room state:', room);
     console.log('Can Draw:', canDraw);
 
-      // This is a new, unified event handler for mouse/touch down
-    const handlePointerDown = (e: PointerEvent | MouseEvent) => {
-        e.preventDefault(); // This is critical for preventing scrolling and zooming
-        // Prevent drawing with multiple fingers (e.g., if isPrimary is false)
-        if ('isPrimary' in e && !e.isPrimary) return; 
-        
-        // Your existing startDrawing logic goes here
-        if (!canDraw) {
-        toast.warn("You don't have permission to draw yet.");
-        return;
-        }
-
-        setIsDrawing(true);
-        if (!canvasRef.current) return;
-        if (!canvasRef.current) return;
-        if (!canvasRef.current) return;
-        if (!canvasRef.current) return;
-        const rect = canvasRef.current.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        const point = { x, y };
-
-        if (activeTool === "pen" || activeTool === "eraser") {
-        const newLine = {
-            id: Date.now().toString(),
-            type: activeTool,
-            points: [point],
-            color: activeTool === "eraser" ? '#FFFFFF' : colorRef.current,
-            width: brushSizeRef.current
+    //NEW : Detect mobile on mount and resize
+    useEffect(() => {
+        const checkMobile = () => {
+            const mobile = window.innerWidth <= 768;
+            setIsMobile(mobile);
+            return mobile;
         };
-        linesRef.current = [...linesRef.current, newLine];
-        lastPointRef.current = point;
-        if (room && socket.connected) {
-            socket.emit('draw', newLine, room.roomCode);
+
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+
+        return () => {
+            window.removeEventListener('resize', checkMobile)
         }
-        } else if (activeTool === 'rectangle' || activeTool === 'circle') {
-        startPointRef.current = point;
-        lastPointRef.current = point;
-        }
-    };
+    }, []);
 
-      // This is the new, unified event handler for mouse/touch move
-    const handlePointerMove = (e: PointerEvent | MouseEvent) => {
-        if (!isDrawing) return;
-        e.preventDefault(); // Prevents scrolling during drawing
-        
-        
-        const canvas = canvasRef.current;
-        const ctx = ctxRef.current;
-        const lastPoint = lastPointRef.current;
-
-        if (!canvas || !ctx || !lastPoint) {
-            return;
-        }
-        
-        const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        const point = { x, y };
-
-
-        //pen and eraser logic
-        if (activeTool === "pen" || activeTool === "eraser") {
-            const lastLine = linesRef.current[linesRef.current.length - 1];
-            const updatedLine = { ...lastLine, points: [...(lastLine.points ?? []), point] };
-            linesRef.current[linesRef.current.length - 1] = updatedLine;
-            ctx.beginPath();
-            ctx.lineWidth = brushSizeRef.current;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            ctx.strokeStyle = activeTool === 'eraser' ? '#FFFFFF' : colorRef.current;
-            if (lastPointRef.current) {
-                ctx.moveTo(lastPointRef.current.x, lastPointRef.current.y);
-                ctx.lineTo(point.x, point.y);
-                ctx.stroke();
-            }
-            if (room && socket.connected) {
-                socket.emit('draw', updatedLine, room.roomCode);
-            }
-        } else if (activeTool === 'rectangle' || activeTool === 'circle') {
-            redrawCanvas();
-            ctx.beginPath();
-            ctx.strokeStyle = colorRef.current;
-            ctx.lineWidth = brushSizeRef.current;
-            if (activeTool === 'rectangle') {
-                if (startPointRef.current) {
-                    const width = point.x - startPointRef.current.x;
-                    const height = point.y - startPointRef.current.y;
-                    ctx.strokeRect(startPointRef.current.x, startPointRef.current.y, width, height);
-                }
-            } else if (activeTool === 'circle') {
-                if (startPointRef.current) {
-                    const dx = point.x - startPointRef.current.x;
-                    const dy = point.y - startPointRef.current.y;
-                    const radius = Math.sqrt(dx * dx + dy * dy);
-                    ctx.arc(startPointRef.current.x, startPointRef.current.y, radius, 0, 2 * Math.PI);
-                    ctx.stroke();
-                }
-            }
-        }
-        lastPointRef.current = point;
-    };
-
-        const handlePointerUp = (e: PointerEvent) => {
-        if (!isDrawing) return;
-        e.preventDefault();
-        setIsDrawing(false);
-        if (activeTool === 'rectangle' || activeTool === 'circle') {
-            if (!startPointRef.current || !lastPointRef.current) return;
-            const newShape: DrawingLine = {
-                id: Date.now().toString(),
-                type: activeTool,
-                startPoint: startPointRef.current,
-                endPoint: lastPointRef.current,
-                color: colorRef.current,
-                width: brushSizeRef.current
-            };
-            linesRef.current = [...linesRef.current, newShape];
-            if (room && socket.connected) {
-                socket.emit('draw', newShape, room.roomCode);
-            }
-            redrawCanvas();
-        }
-        historyRef.current.push(JSON.parse(JSON.stringify(linesRef.current)));
-        historyRefIndex.current = historyRef.current.length - 1;
-        lastPointRef.current = null;
-        startPointRef.current = null;
-    };
-
-    const handlePointerLeave = (e: PointerEvent) => {
-        if (isDrawing) {
-            handlePointerUp(e);
-        }
-    };
-
-
-    // --- Drawing Utility Functions (useCallback for stability) ---
-    // (Duplicate redrawCanvas removed to fix redeclaration error)
 
     // Define redrawCanvas outside of useEffect so it's stable
     const redrawCanvas = useCallback(() => {
@@ -251,25 +128,160 @@ const Whiteboard: React.FC = () => {
         console.log("--- CANVAS: redrawCanvas: Finished redrawing all lines. ---");
     }, []); // Depends on drawLine
 
+      // This is a new, unified event handler for mouse/touch down
+    const handlePointerDown = useCallback((e: PointerEvent) => {
+        e.preventDefault();
+        if (!e.isPrimary) return;
+        
+        if (!canDraw) {
+            toast.warn("You don't have permission to draw yet.");
+            return;
+        }
+
+        setIsDrawing(true);
+        if (!canvasRef.current) return;
+        
+        const point = getCoordinates(e);
+
+        if (activeTool === "pen" || activeTool === "eraser") {
+            const newLine = {
+                id: Date.now().toString() + Math.random().toString(36).substring(2,9),
+                type: activeTool,
+                points: [point],
+                color: activeTool === "eraser" ? '#FFFFFF' : colorRef.current,
+                width: brushSizeRef.current
+            };
+            linesRef.current = [...linesRef.current, newLine];
+            lastPointRef.current = point;
+            if (room && socket.connected) {
+                socket.emit('draw', newLine, room.roomCode);
+            }
+        } else if (activeTool === 'rectangle' || activeTool === 'circle') {
+            startPointRef.current = point;
+            lastPointRef.current = point;
+        }
+    }, [canDraw, activeTool, room]);
+
+
+
+      // This is the new, unified event handler for mouse/touch move
+    const handlePointerMove = useCallback((e: PointerEvent) => {
+        if (!isDrawing || !canDraw) return;
+        e.preventDefault();
+        
+        const canvas = canvasRef.current;
+        const ctx = ctxRef.current;
+        const lastPoint = lastPointRef.current;
+
+        if (!canvas || !ctx || !lastPoint) return;
+        
+        const point = getCoordinates(e);
+
+        if (activeTool === "pen" || activeTool === "eraser") {
+            const lastLine = linesRef.current[linesRef.current.length - 1];
+            const updatedLine = { 
+                ...lastLine, 
+                points: [...(lastLine.points ?? []), point] 
+            };
+            linesRef.current[linesRef.current.length - 1] = updatedLine;
+            
+            ctx.beginPath();
+            ctx.lineWidth = brushSizeRef.current;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.strokeStyle = activeTool === 'eraser' ? '#FFFFFF' : colorRef.current;
+            
+            ctx.moveTo(lastPoint.x, lastPoint.y);
+            ctx.lineTo(point.x, point.y);
+            ctx.stroke();
+            
+            if (room && socket.connected) {
+                socket.emit('draw', updatedLine, room.roomCode);
+            }
+        } else if (activeTool === 'rectangle' || activeTool === 'circle') {
+            redrawCanvas();
+            ctx.beginPath();
+            ctx.strokeStyle = colorRef.current;
+            ctx.lineWidth = brushSizeRef.current;
+            
+            if (startPointRef.current) {
+                if (activeTool === 'rectangle') {
+                    const width = point.x - startPointRef.current.x;
+                    const height = point.y - startPointRef.current.y;
+                    ctx.strokeRect(startPointRef.current.x, startPointRef.current.y, width, height);
+                } else if (activeTool === 'circle') {
+                    const dx = point.x - startPointRef.current.x;
+                    const dy = point.y - startPointRef.current.y;
+                    const radius = Math.sqrt(dx * dx + dy * dy);
+                    ctx.arc(startPointRef.current.x, startPointRef.current.y, radius, 0, 2 * Math.PI);
+                    ctx.stroke();
+                }
+            }
+        }
+        lastPointRef.current = point;
+    }, [isDrawing, canDraw, activeTool, room, redrawCanvas]);
+
+
+
+    const handlePointerUp = useCallback((e: PointerEvent) => {
+        if (!isDrawing) return;
+        e.preventDefault();
+        setIsDrawing(false);
+        
+        if (activeTool === 'rectangle' || activeTool === 'circle') {
+            if (!startPointRef.current || !lastPointRef.current) return;
+            const newShape: DrawingLine = {
+                id: Date.now().toString(),
+                type: activeTool,
+                startPoint: startPointRef.current,
+                endPoint: lastPointRef.current,
+                color: colorRef.current,
+                width: brushSizeRef.current
+            };
+            linesRef.current = [...linesRef.current, newShape];
+            if (room && socket.connected) {
+                socket.emit('draw', newShape, room.roomCode);
+            }
+            redrawCanvas();
+        }
+        
+        historyRef.current.push(JSON.parse(JSON.stringify(linesRef.current)));
+        historyRefIndex.current = historyRef.current.length - 1;
+        lastPointRef.current = null;
+        startPointRef.current = null;
+    }, [isDrawing, activeTool, room, redrawCanvas]);
+
+
+    const handlePointerLeave = useCallback((e: PointerEvent) => {
+        if (isDrawing) {
+            handlePointerUp(e);
+        }
+    }, [isDrawing, handlePointerUp]);
+
+
+    // --- Drawing Utility Functions (useCallback for stability) --
+
     useEffect(() => {
         const canvas = canvasRef.current;
-
         if (!canvas) return;
 
-        canvas.addEventListener('pointerdown', handlePointerDown as EventListener, { passive: false });
-        canvas.addEventListener('pointermove', handlePointerMove as EventListener, { passive: false });
-        canvas.addEventListener('pointerup', handlePointerUp as EventListener);
-        canvas.addEventListener('pointerleave', handlePointerLeave as EventListener);
+        // Add event listeners
+        canvas.addEventListener('pointerdown', handlePointerDown, { passive: false });
+        canvas.addEventListener('pointermove', handlePointerMove, { passive: false });
+        canvas.addEventListener('pointerup', handlePointerUp);
+        canvas.addEventListener('pointerleave', handlePointerLeave);
 
         return () => {
-            canvas.removeEventListener('pointerdown', handlePointerDown as EventListener);
-            canvas.removeEventListener('pointermove', handlePointerMove as EventListener);
-            canvas.removeEventListener('pointerup', handlePointerUp as EventListener);
-            canvas.removeEventListener('pointerleave', handlePointerLeave as EventListener);
-        }
-    }, [isDrawing, canDraw, activeTool, color, brushSize, room, socket, redrawCanvas]);
+            // Cleanup event listeners
+            canvas.removeEventListener('pointerdown', handlePointerDown);
+            canvas.removeEventListener('pointermove', handlePointerMove);
+            canvas.removeEventListener('pointerup', handlePointerUp);
+            canvas.removeEventListener('pointerleave', handlePointerLeave);
+        };
+    }, [handlePointerDown, handlePointerMove, handlePointerUp, handlePointerLeave]);
+
         // --- Room Data Fetching ---
-        useEffect(() => {
+    useEffect(() => {
         const fetchRoomDetails = async () => {
             if (!roomCode) {
                 setError('No room code provided.');
@@ -327,47 +339,6 @@ const Whiteboard: React.FC = () => {
         }
     }
 
-    // --- Drawing Utility Functions (useCallback for stability) ---
-
-    // Define drawLine outside of useEffect so it's stable
-    // AS THERES NO NEED OF THIS CALLBACK, HENCE WE WILL BE COMMENTING IT OUT.
-    // THE redrawCanvas function now handles and contains all necessary logic to drawing both lines & shapes.
-    //HENCE, THE SEPARATE drawLine IS REDUNDANT.
-    /*
-    const drawLine = useCallback((ctx: CanvasRenderingContext2D, line: DrawingLine) => {
-
-        // Check if the 'line.points' array exists and has at least two points for a line
-        if (!line.points || line.points.length < 2) {
-            // Handle shapes or lines with insufficient points
-            // You can add logic here to draw shapes if needed, or simply return
-            // For now, let's just handle the pencil/pen logic.
-            return;
-        }
-
-        if (line.points.length === 0) {
-            console.warn(`--- DRAWLINE: Line ID ${line.id} has no points, skipping draw. ---`);
-            return;
-        }
-
-        ctx.beginPath();
-        ctx.lineWidth = line.width;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.strokeStyle = line.color;
-
-        console.log(`--- DRAWLINE: Setting style for line ${line.id}: Color=${line.color}, Width=${line.width} ---`);
-
-        ctx.moveTo(line.points[0].x, line.points[0].y);
-        for (let i = 1; i < line.points.length; i++) {
-            ctx.lineTo(line.points[i].x, line.points[i].y);
-        }
-        ctx.stroke();
-        console.log(`--- DRAWLINE: Line ${line.id} stroke completed. ---`);
-    }, []); // No dependencies, as it only uses its arguments
-    */
-
-
-    // Define initCanvas outside of useEffect, using useCallback for stability
     const initCanvas = useCallback(() => {
         if (!containerRef.current || !canvasRef.current) {
             console.warn("DEBUG INIT: containerRef or canvasRef not available during initCanvas.");
@@ -382,17 +353,24 @@ const Whiteboard: React.FC = () => {
             return;
         }
 
+        //Using the isMobile state for consistent sizing
+        const containerWidth = container.clientWidth;
+        const maxHeight = isMobile
+            ? Math.min(window.innerHeight * 0.5 , 500) 
+            : Math.min(container.clientHeight, window.innerHeight * 0.7);
+
+    
+
         // --- IMPORTANT NEW LOGS ---
         console.log(`DEBUG INIT CALL START: clientWidth=${container.clientWidth}, clientHeight=${container.clientHeight}`);
         console.log(`DEBUG INIT CALL START: canvas.width (before set)=${canvas.width}, canvas.height (before set)=${canvas.height}`);
         // --- END IMPORTANT NEW LOGS ---
 
-
-        const width = container.clientWidth;
-        const height = Math.min(container.clientHeight, window.innerHeight * 0.7);
-
+        const width = containerWidth;
+        const height = maxHeight;
+        
         // Update local state to trigger canvas attribute update in JSX
-        setCanvasDimensions({ width, height });
+        //setCanvasDimensions({ width, height });
 
         const scale = window.devicePixelRatio || 1;
         // Set the actual pixel dimensions of the canvas drawing surface
@@ -404,16 +382,20 @@ const Whiteboard: React.FC = () => {
         canvas.style.height = `${height}px`;
 
         ctx.scale(scale, scale);
-        ctxRef.current = ctx; // *** CRUCIAL: Store the context in the ref ***
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
 
+        ctxRef.current = ctx; // *** CRUCIAL: Store the context in the ref ***
         redrawCanvas(); // Redraw existing lines after canvas re-initialization
 
-        // --- IMPORTANT NEW LOGS ---
-        console.log(`DEBUG INIT CALL END: Final Canvas Pixel Width (attribute): ${canvas.width}`);
-        console.log(`DEBUG INIT CALL END: Final Canvas Pixel Height (attribute): ${canvas.height}`);
-        // --- END IMPORTANT NEW LOGS ---
+        console.log(`Canvas initialized: ${width}x${height}, mobile: ${isMobile}`)
         
-    }, [redrawCanvas]); // Depends on redrawCanvas
+    }, [isMobile, redrawCanvas]); // Depends on redrawCanvas
+
+    //initialize canvas when mobile detection changes
+    useEffect(() => {
+        initCanvas();
+    }, [initCanvas])
 
     // --- Core Canvas Initialization and Resize Handling ---
     // --- Main Canvas Setup and Socket Listeners Effect ---
@@ -559,17 +541,20 @@ const Whiteboard: React.FC = () => {
 
 
     // Get coordinates relative to canvas
-    const getCoordinates = (e: React.PointerEvent<HTMLCanvasElement>): Point => {
+    const getCoordinates = (e: PointerEvent): Point => {
         if (!canvasRef.current) return { x: 0, y: 0 };
 
         const canvas = canvasRef.current;
         const rect = canvas.getBoundingClientRect();
-        
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+
+        const x = (e.clientX - rect.left) * scaleX;
+        const y = (e.clientY - rect.top) * scaleY;
         return { x, y };
     };
 
+    /*
     // Start drawing
     const startDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
         console.log(`DEBUG: Event Handler Triggered: startDrawing (type: ${e.type})`);
@@ -735,6 +720,7 @@ const Whiteboard: React.FC = () => {
         lastPointRef.current = null;
         startPointRef.current = null;
     };
+    */
 
     // Clear the board
     const clearBoard = () => {
@@ -971,17 +957,11 @@ const Whiteboard: React.FC = () => {
                             <canvas
                                 ref={canvasRef}
                                 className='w-full h-full cursor-crosshair drawing-canvas'
-                                onPointerDown={startDrawing}
-                                onPointerMove={draw}
-                                onPointerUp={endDrawing}
-                                onPointerLeave={endDrawing} // Recommended for a clean stop
-                                onPointerCancel={endDrawing}
-                                width={canvasDimensions.width}
-                                height={canvasDimensions.height}
                                 style={{
                                     touchAction: 'none',
                                     userSelect: 'none',
-                                    WebkitUserSelect: 'none'
+                                    WebkitUserSelect: 'none',
+                                    WebkitTouchCallout: 'none'
                                 }}
                             />
                         </div>
