@@ -58,8 +58,218 @@ const Whiteboard: React.FC = () => {
     console.log('Current room state:', room);
     console.log('Can Draw:', canDraw);
 
-    // --- Room Data Fetching ---
+      // This is a new, unified event handler for mouse/touch down
+    const handlePointerDown = (e: PointerEvent | MouseEvent) => {
+        e.preventDefault(); // This is critical for preventing scrolling and zooming
+        // Prevent drawing with multiple fingers (e.g., if isPrimary is false)
+        if ('isPrimary' in e && !e.isPrimary) return; 
+        
+        // Your existing startDrawing logic goes here
+        if (!canDraw) {
+        toast.warn("You don't have permission to draw yet.");
+        return;
+        }
+
+        setIsDrawing(true);
+        if (!canvasRef.current) return;
+        if (!canvasRef.current) return;
+        if (!canvasRef.current) return;
+        if (!canvasRef.current) return;
+        const rect = canvasRef.current.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const point = { x, y };
+
+        if (activeTool === "pen" || activeTool === "eraser") {
+        const newLine = {
+            id: Date.now().toString(),
+            type: activeTool,
+            points: [point],
+            color: activeTool === "eraser" ? '#FFFFFF' : colorRef.current,
+            width: brushSizeRef.current
+        };
+        linesRef.current = [...linesRef.current, newLine];
+        lastPointRef.current = point;
+        if (room && socket.connected) {
+            socket.emit('draw', newLine, room.roomCode);
+        }
+        } else if (activeTool === 'rectangle' || activeTool === 'circle') {
+        startPointRef.current = point;
+        lastPointRef.current = point;
+        }
+    };
+
+      // This is the new, unified event handler for mouse/touch move
+    const handlePointerMove = (e: PointerEvent | MouseEvent) => {
+        if (!isDrawing) return;
+        e.preventDefault(); // Prevents scrolling during drawing
+        
+        
+        const canvas = canvasRef.current;
+        const ctx = ctxRef.current;
+        const lastPoint = lastPointRef.current;
+
+        if (!canvas || !ctx || !lastPoint) {
+            return;
+        }
+        
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const point = { x, y };
+
+
+        //pen and eraser logic
+        if (activeTool === "pen" || activeTool === "eraser") {
+            const lastLine = linesRef.current[linesRef.current.length - 1];
+            const updatedLine = { ...lastLine, points: [...(lastLine.points ?? []), point] };
+            linesRef.current[linesRef.current.length - 1] = updatedLine;
+            ctx.beginPath();
+            ctx.lineWidth = brushSizeRef.current;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.strokeStyle = activeTool === 'eraser' ? '#FFFFFF' : colorRef.current;
+            if (lastPointRef.current) {
+                ctx.moveTo(lastPointRef.current.x, lastPointRef.current.y);
+                ctx.lineTo(point.x, point.y);
+                ctx.stroke();
+            }
+            if (room && socket.connected) {
+                socket.emit('draw', updatedLine, room.roomCode);
+            }
+        } else if (activeTool === 'rectangle' || activeTool === 'circle') {
+            redrawCanvas();
+            ctx.beginPath();
+            ctx.strokeStyle = colorRef.current;
+            ctx.lineWidth = brushSizeRef.current;
+            if (activeTool === 'rectangle') {
+                if (startPointRef.current) {
+                    const width = point.x - startPointRef.current.x;
+                    const height = point.y - startPointRef.current.y;
+                    ctx.strokeRect(startPointRef.current.x, startPointRef.current.y, width, height);
+                }
+            } else if (activeTool === 'circle') {
+                if (startPointRef.current) {
+                    const dx = point.x - startPointRef.current.x;
+                    const dy = point.y - startPointRef.current.y;
+                    const radius = Math.sqrt(dx * dx + dy * dy);
+                    ctx.arc(startPointRef.current.x, startPointRef.current.y, radius, 0, 2 * Math.PI);
+                    ctx.stroke();
+                }
+            }
+        }
+        lastPointRef.current = point;
+    };
+
+        const handlePointerUp = (e: PointerEvent) => {
+        if (!isDrawing) return;
+        e.preventDefault();
+        setIsDrawing(false);
+        if (activeTool === 'rectangle' || activeTool === 'circle') {
+            if (!startPointRef.current || !lastPointRef.current) return;
+            const newShape: DrawingLine = {
+                id: Date.now().toString(),
+                type: activeTool,
+                startPoint: startPointRef.current,
+                endPoint: lastPointRef.current,
+                color: colorRef.current,
+                width: brushSizeRef.current
+            };
+            linesRef.current = [...linesRef.current, newShape];
+            if (room && socket.connected) {
+                socket.emit('draw', newShape, room.roomCode);
+            }
+            redrawCanvas();
+        }
+        historyRef.current.push(JSON.parse(JSON.stringify(linesRef.current)));
+        historyRefIndex.current = historyRef.current.length - 1;
+        lastPointRef.current = null;
+        startPointRef.current = null;
+    };
+
+    const handlePointerLeave = (e: PointerEvent) => {
+        if (isDrawing) {
+            handlePointerUp(e);
+        }
+    };
+
+
+    // --- Drawing Utility Functions (useCallback for stability) ---
+    // (Duplicate redrawCanvas removed to fix redeclaration error)
+
+    // Define redrawCanvas outside of useEffect so it's stable
+    const redrawCanvas = useCallback(() => {
+        const canvas = canvasRef.current;
+        const ctx = ctxRef.current; // Use the stored context
+        if (!canvas || !ctx) {
+            console.warn("--- CANVAS: redrawCanvas: Canvas or context not available. ---");
+            return;
+        }
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        console.log("--- CANVAS: redrawCanvas: Canvas cleared. ---");
+        console.log(`--- CANVAS: redrawCanvas: Attempting to draw ${linesRef.current.length} lines. ---`);
+        linesRef.current.forEach((line) => {
+            // Apply common styles before the type-specific logic
+            ctx.lineWidth = line.width;
+            ctx.strokeStyle = line.color;
+
+            switch (line.type) {
+                case 'pen':
+                case 'eraser':
+                    // Check for a valid points array before drawing
+                    if (line.points && line.points.length >= 2) {
+                        ctx.beginPath();
+                        ctx.lineCap = 'round';
+                        ctx.lineJoin = 'round';
+                        ctx.moveTo(line.points[0].x, line.points[0].y);
+                        for (let i = 1; i < line.points.length; i++) {
+                            ctx.lineTo(line.points[i].x, line.points[i].y);
+                        }
+                        ctx.stroke();
+                    }
+                break;
+                case 'rectangle':
+                case 'circle':
+                    // Check that startPoint and endPoint exist before drawing shapes
+                    if (line.startPoint && line.endPoint) {
+                        ctx.beginPath();
+                        if (line.type === "rectangle") {
+                            const width = line.endPoint.x - line.startPoint.x;
+                            const height = line.endPoint.y - line.startPoint.y;
+                            ctx.strokeRect(line.startPoint.x, line.startPoint.y, width, height);
+                        } else if (line.type === "circle") {
+                            const dx = line.endPoint.x - line.startPoint.x;
+                            const dy = line.endPoint.y - line.startPoint.y;
+                            const radius = Math.sqrt(dx * dx + dy * dy);
+                            ctx.arc(line.startPoint.x, line.startPoint.y, radius,0, 2 * Math.PI);
+                            ctx.stroke()
+                        }
+                    }
+                break;
+            }
+        });
+        console.log("--- CANVAS: redrawCanvas: Finished redrawing all lines. ---");
+    }, []); // Depends on drawLine
+
     useEffect(() => {
+        const canvas = canvasRef.current;
+
+        if (!canvas) return;
+
+        canvas.addEventListener('pointerdown', handlePointerDown as EventListener, { passive: false });
+        canvas.addEventListener('pointermove', handlePointerMove as EventListener, { passive: false });
+        canvas.addEventListener('pointerup', handlePointerUp as EventListener);
+        canvas.addEventListener('pointerleave', handlePointerLeave as EventListener);
+
+        return () => {
+            canvas.removeEventListener('pointerdown', handlePointerDown as EventListener);
+            canvas.removeEventListener('pointermove', handlePointerMove as EventListener);
+            canvas.removeEventListener('pointerup', handlePointerUp as EventListener);
+            canvas.removeEventListener('pointerleave', handlePointerLeave as EventListener);
+        }
+    }, [isDrawing, canDraw, activeTool, color, brushSize, room, socket, redrawCanvas]);
+        // --- Room Data Fetching ---
+        useEffect(() => {
         const fetchRoomDetails = async () => {
             if (!roomCode) {
                 setError('No room code provided.');
@@ -155,60 +365,6 @@ const Whiteboard: React.FC = () => {
         console.log(`--- DRAWLINE: Line ${line.id} stroke completed. ---`);
     }, []); // No dependencies, as it only uses its arguments
     */
-
-    // Define redrawCanvas outside of useEffect so it's stable
-    const redrawCanvas = useCallback(() => {
-        const canvas = canvasRef.current;
-        const ctx = ctxRef.current; // Use the stored context
-        if (!canvas || !ctx) {
-            console.warn("--- CANVAS: redrawCanvas: Canvas or context not available. ---");
-            return;
-        }
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        console.log("--- CANVAS: redrawCanvas: Canvas cleared. ---");
-        console.log(`--- CANVAS: redrawCanvas: Attempting to draw ${linesRef.current.length} lines. ---`);
-        linesRef.current.forEach((line) => {
-            // Apply common styles before the type-specific logic
-            ctx.lineWidth = line.width;
-            ctx.strokeStyle = line.color;
-
-            switch (line.type) {
-                case 'pen':
-                case 'eraser':
-                    // Check for a valid points array before drawing
-                    if (line.points && line.points.length >= 2) {
-                        ctx.beginPath();
-                        ctx.lineCap = 'round';
-                        ctx.lineJoin = 'round';
-                        ctx.moveTo(line.points[0].x, line.points[0].y);
-                        for (let i = 1; i < line.points.length; i++) {
-                            ctx.lineTo(line.points[i].x, line.points[i].y);
-                        }
-                        ctx.stroke();
-                    }
-                break;
-                case 'rectangle':
-                case 'circle':
-                    // Check that startPoint and endPoint exist before drawing shapes
-                    if (line.startPoint && line.endPoint) {
-                        ctx.beginPath();
-                        if (line.type === "rectangle") {
-                            const width = line.endPoint.x - line.startPoint.x;
-                            const height = line.endPoint.y - line.startPoint.y;
-                            ctx.strokeRect(line.startPoint.x, line.startPoint.y, width, height);
-                        } else if (line.type === "circle") {
-                            const dx = line.endPoint.x - line.startPoint.x;
-                            const dy = line.endPoint.y - line.startPoint.y;
-                            const radius = Math.sqrt(dx * dx + dy * dy);
-                            ctx.arc(line.startPoint.x, line.startPoint.y, radius,0, 2 * Math.PI);
-                            ctx.stroke()
-                        }
-                    }
-                break;
-            }
-        });
-        console.log("--- CANVAS: redrawCanvas: Finished redrawing all lines. ---");
-    }, []); // Depends on drawLine
 
 
     // Define initCanvas outside of useEffect, using useCallback for stability
@@ -403,28 +559,15 @@ const Whiteboard: React.FC = () => {
 
 
     // Get coordinates relative to canvas
-    const getCoordinates = (e: React.MouseEvent | React.TouchEvent): Point => {
+    const getCoordinates = (e: React.PointerEvent<HTMLCanvasElement>): Point => {
         if (!canvasRef.current) return { x: 0, y: 0 };
 
         const canvas = canvasRef.current;
         const rect = canvas.getBoundingClientRect();
-        const scaleX = canvas.width / rect.width;
-        const scaleY = canvas.height / rect.height;
-
-        let clientX, clientY;
-        if ('touches' in e) {
-            clientX = e.touches[0].clientX;
-            clientY = e.touches[0].clientY;
-        } else {
-            clientX = e.clientX;
-            clientY = e.clientY;
-        }
-
-        // Return coordinates relative to the canvas's CSS size
-        return {
-           x: (clientX - rect.left) * scaleX,
-            y: (clientY - rect.top) * scaleY
-        };
+        
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        return { x, y };
     };
 
     // Start drawing
@@ -433,6 +576,7 @@ const Whiteboard: React.FC = () => {
         // Crucial: Use e.preventDefault() to block default browser behavior
         // and check for the primary pointer to prevent multi-touch issues.
         e.preventDefault();
+        e.stopPropagation();
         if (!e.isPrimary) return;
 
         if (!canDraw) {
@@ -476,7 +620,7 @@ const Whiteboard: React.FC = () => {
 
         console.log(`DEBUG DRAW CHECK: canDraw=${canDraw}, isDrawing=${isDrawing}, lastPointRef.current=${lastPointRef.current ? 'true' : 'false'}`);
         e.preventDefault();
-
+        e.stopPropagation()
 
         if (!canDraw || !isDrawing) return;
 
@@ -547,8 +691,10 @@ const Whiteboard: React.FC = () => {
     };
 
     // Stop drawing
-    const endDrawing = () => {
+    const endDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
         console.log('DEBUG: Event Handler Triggered: endDrawing');
+        e.preventDefault();
+        e.stopPropagation()
         if (!canDraw || !isDrawing) { // Add this line if it's not there
             return;
         }
@@ -832,6 +978,11 @@ const Whiteboard: React.FC = () => {
                                 onPointerCancel={endDrawing}
                                 width={canvasDimensions.width}
                                 height={canvasDimensions.height}
+                                style={{
+                                    touchAction: 'none',
+                                    userSelect: 'none',
+                                    WebkitUserSelect: 'none'
+                                }}
                             />
                         </div>
                         {/* The side panel */}

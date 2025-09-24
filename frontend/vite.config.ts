@@ -20,6 +20,7 @@ export default defineConfig({
     'process.env': process.env
   },
   server: {
+    host: true,
     proxy: {
       '/socket.io': {
         target: process.env.VITE_BACKEND_URL,
