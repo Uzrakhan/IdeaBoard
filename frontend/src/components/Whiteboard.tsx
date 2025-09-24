@@ -546,11 +546,11 @@ const Whiteboard: React.FC = () => {
 
         const canvas = canvasRef.current;
         const rect = canvas.getBoundingClientRect();
-        const scaleX = canvas.width / rect.width;
-        const scaleY = canvas.height / rect.height;
+        
 
-        const x = (e.clientX - rect.left) * scaleX;
-        const y = (e.clientY - rect.top) * scaleY;
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        console.log(`Coordinates: x=${x}, y=${y}, clientX=${e.clientX}, rect.left=${rect.left}`); // Debug log
         return { x, y };
     };
 
