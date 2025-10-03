@@ -10,6 +10,7 @@ import { Pen, Eraser, Circle, RectangleHorizontal, PanelRight  } from 'lucide-re
 
 type Point = { x: number; y: number };
 type DrawingLine = {
+    sentTimestamp: any;
     id: string;
     type: 'pen' | 'eraser' | 'rectangle' | 'circle';
     points?: Point[];
@@ -144,17 +145,25 @@ const Whiteboard: React.FC = () => {
         const point = getCoordinates(e);
 
         if (activeTool === "pen" || activeTool === "eraser") {
+            // 💡 LATENCY METRIC STEP 1: Capture start time
+            const startTime = Date.now(); 
             const newLine = {
                 id: Date.now().toString() + Math.random().toString(36).substring(2,9),
                 type: activeTool,
                 points: [point],
                 color: activeTool === "eraser" ? '#FFFFFF' : colorRef.current,
-                width: brushSizeRef.current
+                width: brushSizeRef.current,
+                // 💡 LATENCY METRIC STEP 2: Attach the timestamp to the data object
+                sentTimestamp: startTime 
+
             };
             linesRef.current = [...linesRef.current, newLine];
             lastPointRef.current = point;
             if (room && socket.connected) {
-                socket.emit('draw', newLine, room.roomCode);
+                // 💡 LATENCY METRIC STEP 3: Emit the data
+                socket.emit('draw', newLine, room.roomCode); 
+                // We'll log the start of the action here
+                console.log(`[LATENCY SENDER] Started drawing line ${newLine.id} at ${startTime.toFixed(2)} ms.`);
             }
         } else if (activeTool === 'rectangle' || activeTool === 'circle') {
             startPointRef.current = point;
@@ -196,7 +205,16 @@ const Whiteboard: React.FC = () => {
             ctx.stroke();
             
             if (room && socket.connected) {
-                socket.emit('draw', updatedLine, room.roomCode);
+                // 💡 NEW LATENCY STEP: Capture time right before sending the segment update
+                const startTime = Date.now(); 
+                
+                // 💡 Attach the timestamp to the updated line object
+                const lineWithTimestamp = {
+                    ...updatedLine,
+                    sentTimestamp: startTime
+                }
+                socket.emit('draw', lineWithTimestamp, room.roomCode);
+                console.log(`[LATENCY SENDER MOVE] Emitted update for ${updatedLine.id} at ${startTime.toFixed(2)}ms`); 
             }
         } else if (activeTool === 'rectangle' || activeTool === 'circle') {
             redrawCanvas();
@@ -236,7 +254,8 @@ const Whiteboard: React.FC = () => {
                 startPoint: startPointRef.current,
                 endPoint: lastPointRef.current,
                 color: colorRef.current,
-                width: brushSizeRef.current
+                width: brushSizeRef.current,
+                sentTimestamp: undefined
             };
             linesRef.current = [...linesRef.current, newShape];
             if (room && socket.connected) {
@@ -432,6 +451,29 @@ const Whiteboard: React.FC = () => {
         };
 
         const handleDraw = (line: DrawingLine) => {
+            // 💡 LATENCY METRIC STEP 4: Capture end time upon receipt
+            const endTime = Date.now(); 
+
+            // --- NEW CRITICAL DEBUG LOG ---
+            console.log(`[LATENCY DEBUG] Received line ID: ${line.id}. sentTimestamp received: ${line.sentTimestamp}`);
+            // --- END NEW CRITICAL DEBUG LOG ---
+
+
+            if (line.sentTimestamp) {
+                // Calculate latency based on the segment timestamp
+                const latency = endTime - line.sentTimestamp;
+                
+                // Only log if the latency is reasonable (e.g., less than 5 seconds)
+                if (latency > 0 && latency < 5000) { 
+                    console.log(`[LATENCY RECEIVER] Latency for segment: ${latency.toFixed(2)} ms.`);
+                    // 🚨 RECORD THIS NUMBER 🚨
+                }else {
+                    // Show the huge numbers if they appear, which proves the property exists
+                    console.warn(`[LATENCY WARNING] Latency calculation resulted in a large number: ${latency.toFixed(2)} ms.`);
+                }
+            }
+
+
             const existingLineIndex = linesRef.current.findIndex(l => l.id === line.id);
 
             if (existingLineIndex !== -1) {
