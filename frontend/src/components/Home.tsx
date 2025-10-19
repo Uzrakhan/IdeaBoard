@@ -1,7 +1,15 @@
 import { motion, type TargetAndTransition } from 'framer-motion';
 import { Sparkles, Zap, Users, Palette, Code, Layers } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const Home = () => {
+
+  const navigate = useNavigate();
+
+  const handleCreateRoom = () => {
+    navigate('/create-room');
+  };
+
   const fadeInUp = {
     initial: { opacity: 0, y: 60 },
     animate: { opacity: 1, y: 0 },
@@ -100,7 +108,7 @@ const Home = () => {
               variants={fadeInUp}
               className="flex flex-col sm:flex-row gap-4"
             >
-              <button className="group relative bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-semibold py-4 px-8 rounded-xl text-center transition-all duration-300 hover:shadow-lg hover:shadow-violet-500/50 hover:scale-105">
+              <button onClick={handleCreateRoom} className="group relative bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-semibold py-4 px-8 rounded-xl text-center transition-all duration-300 hover:shadow-lg hover:shadow-violet-500/50 hover:scale-105">
                 <span className="relative z-10">Create a Room</span>
                 <motion.div
                   className="absolute inset-0 bg-gradient-to-r from-fuchsia-600 to-violet-600 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"
@@ -163,7 +171,7 @@ const Home = () => {
       </section>
 
       {/* Features Section */}
-      <section className="py-20">
+      <section className="py-20" id="features">
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -281,69 +289,6 @@ const Home = () => {
         </div>
       </motion.section>
 
-      {/* Testimonials */}
-      <motion.section 
-        className="py-20"
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.8 }}
-      >
-        <h2 className="text-4xl font-bold text-center bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent mb-16">
-          What Our Users Say
-        </h2>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-          {[
-            {
-              quote: "IdeaBoard has transformed our remote brainstorming sessions. The interface is incredibly intuitive and beautiful!",
-              author: "Sarah Johnson",
-              role: "Product Manager"
-            },
-            {
-              quote: "The attention to detail in the animations and user experience is outstanding. It's our go-to collaboration tool.",
-              author: "Michael Chen",
-              role: "Engineering Lead"
-            }
-          ].map((testimonial, index) => (
-            <motion.div 
-              key={index}
-              initial={{ opacity: 0, x: index === 0 ? -50 : 50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: index * 0.2 }}
-              whileHover={{ scale: 1.02 }}
-              className="bg-white p-8 rounded-2xl shadow-lg border border-slate-200/50"
-            >
-              <div className="flex gap-1 mb-4">
-                {[...Array(5)].map((_, i) => (
-                  <motion.span
-                    key={i}
-                    initial={{ opacity: 0, scale: 0 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: 0.5 + i * 0.1 }}
-                    className="text-yellow-400 text-xl"
-                  >
-                    ★
-                  </motion.span>
-                ))}
-              </div>
-              <p className="text-slate-600 mb-6 text-lg leading-relaxed italic">"{testimonial.quote}"</p>
-              <div className="flex items-center">
-                <div className="w-14 h-14 bg-gradient-to-br from-violet-400 to-fuchsia-400 rounded-full flex items-center justify-center text-white font-bold text-xl">
-                  {testimonial.author[0]}
-                </div>
-                <div className="ml-4">
-                  <p className="font-semibold text-slate-800 text-lg">{testimonial.author}</p>
-                  <p className="text-slate-500">{testimonial.role}</p>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </motion.section>
-
       {/* CTA Section */}
       <motion.section 
         className="py-20 text-center relative"
@@ -367,7 +312,7 @@ const Home = () => {
             <p className="text-xl mb-10 max-w-2xl mx-auto opacity-90">
               Join thousands of teams already using IdeaBoard to power their collaboration
             </p>
-            <button className="inline-block bg-white text-violet-600 font-bold py-4 px-10 rounded-xl text-lg transition-all duration-300 hover:scale-105 hover:shadow-2xl">
+            <button onClick={handleCreateRoom} className="inline-block bg-white text-violet-600 font-bold py-4 px-10 rounded-xl text-lg transition-all duration-300 hover:scale-105 hover:shadow-2xl">
               Create Your First Room
             </button>
           </motion.div>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { HashLink as Link } from 'react-router-hash-link'
 import { useAuth } from '../context/AuthContext';
 import { Menu, X, Sparkles } from 'lucide-react';
 
@@ -25,7 +26,7 @@ const Header: React.FC<HeaderProps> = ({ onLogout }) => {
       <div className="container mx-auto px-4 py-4">
         <div className="flex justify-between items-center">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-3 group">
+          <NavLink to="/" className="flex items-center space-x-3 group">
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-br from-violet-600 to-fuchsia-600 rounded-xl blur-md opacity-50 group-hover:opacity-75 transition-opacity" />
               <div className="relative bg-gradient-to-br from-violet-600 to-fuchsia-600 w-10 h-10 rounded-xl flex items-center justify-center shadow-lg">
@@ -37,28 +38,29 @@ const Header: React.FC<HeaderProps> = ({ onLogout }) => {
                 IdeaBoard
               </h1>
             </div>
-          </Link>
+          </NavLink>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-1">
-            <Link 
+            <NavLink 
               to="/" 
               className="px-4 py-2 text-slate-700 hover:text-violet-600 font-medium transition-colors rounded-lg hover:bg-violet-50"
             >
               Home
-            </Link>
-            <Link 
+            </NavLink>
+            <NavLink 
               to="/create-room" 
               className="px-4 py-2 text-slate-700 hover:text-violet-600 font-medium transition-colors rounded-lg hover:bg-violet-50"
             >
               Create Room
-            </Link>
+            </NavLink>
             <Link 
-              to="/features" 
-              className="px-4 py-2 text-slate-700 hover:text-violet-600 font-medium transition-colors rounded-lg hover:bg-violet-50"
-            >
-              Features
-            </Link>
+              to="/#features" // The link to the Home route + hash
+              className="px-4 py-2 text-slate-700 hover:text-violet-600 font-medium transition-colors rounded-lg hover:bg-violet-50"
+              scroll={(el: { scrollIntoView: (arg0: { behavior: string; }) => any; }) => el.scrollIntoView({ behavior: 'smooth' })} // Optional: ensure smooth scroll
+            >
+              Features
+            </Link>
           </nav>
 
           {/* Auth Section */}
@@ -102,27 +104,28 @@ const Header: React.FC<HeaderProps> = ({ onLogout }) => {
         {/* Mobile Menu */}
         {mobileMenuOpen && (
           <div className="md:hidden mt-4 pb-4 border-t border-slate-200/50 pt-4 space-y-2">
-            <Link 
+            <NavLink 
               to="/" 
               onClick={() => setMobileMenuOpen(false)}
               className="block px-4 py-3 text-slate-700 hover:text-violet-600 font-medium transition-colors rounded-lg hover:bg-violet-50"
             >
               Home
-            </Link>
-            <Link 
+            </NavLink>
+            <NavLink 
               to="/create-room" 
               onClick={() => setMobileMenuOpen(false)}
               className="block px-4 py-3 text-slate-700 hover:text-violet-600 font-medium transition-colors rounded-lg hover:bg-violet-50"
             >
               Create Room
-            </Link>
+            </NavLink>
             <Link 
-              to="/features" 
-              onClick={() => setMobileMenuOpen(false)}
-              className="block px-4 py-3 text-slate-700 hover:text-violet-600 font-medium transition-colors rounded-lg hover:bg-violet-50"
-            >
-              Features
-            </Link>
+              to="/#features" 
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-4 py-3 text-slate-700 hover:text-violet-600 font-medium transition-colors rounded-lg hover:bg-violet-50"
+              scroll={(el: { scrollIntoView: (arg0: { behavior: string; }) => any; }) => el.scrollIntoView({ behavior: 'smooth' })}
+            >
+              Features
+            </Link>
             
             {user ? (
               <div className="space-y-2 pt-2">
@@ -145,13 +148,13 @@ const Header: React.FC<HeaderProps> = ({ onLogout }) => {
                 </button>
               </div>
             ) : (
-              <Link 
+              <NavLink 
                 to="/auth" 
                 onClick={() => setMobileMenuOpen(false)}
                 className="block px-4 py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-semibold rounded-lg hover:shadow-lg hover:shadow-violet-500/50 transition-all duration-300 text-center"
               >
                 Login
-              </Link>
+              </NavLink>
             )}
           </div>
         )}
