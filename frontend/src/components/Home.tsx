@@ -1,12 +1,11 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, type TargetAndTransition } from 'framer-motion';
 import { Sparkles, Zap, Users, Palette, Code, Layers } from 'lucide-react';
 
 const Home = () => {
   const fadeInUp = {
     initial: { opacity: 0, y: 60 },
     animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.6, ease: "easeOut" }
+    transition: { duration: 0.6, ease: [0, 0, 0.2, 1] }
   };
 
   const staggerContainer = {
@@ -30,7 +29,7 @@ const Home = () => {
       repeat: Infinity,
       ease: "easeInOut"
     }
-  };
+  } as TargetAndTransition;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 overflow-hidden bg-white">
@@ -46,7 +45,7 @@ const Home = () => {
           transition={{
             duration: 8,
             repeat: Infinity,
-            ease: "easeInOut"
+            ease: [0.42, 0, 0.58, 1]
           }}
         />
         <motion.div 
@@ -58,7 +57,7 @@ const Home = () => {
           transition={{
             duration: 10,
             repeat: Infinity,
-            ease: "easeInOut",
+            ease: [0.42, 0, 0.58, 1],
             delay: 1
           }}
         />
@@ -151,12 +150,12 @@ const Home = () => {
               <motion.div
                 className="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-2xl opacity-80"
                 animate={{ rotate: [0, 180, 360] }}
-                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                transition={{ duration: 20, repeat: Infinity, ease: [0.4, 0, 0.2, 1]  }}
               />
               <motion.div
                 className="absolute -bottom-4 -left-4 w-20 h-20 bg-gradient-to-br from-fuchsia-400 to-violet-500 rounded-full opacity-80"
                 animate={{ scale: [1, 1.2, 1] }}
-                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                transition={{ duration: 4, repeat: Infinity, ease: [0.42, 0, 0.58, 1] }}
               />
             </motion.div>
           </motion.div>

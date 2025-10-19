@@ -59,6 +59,7 @@ const AuthPage: React.FC = () => {
         ? <span className="text-blue-600 hover:text-blue-800 transition-colors duration-150">Sign Up</span> 
         : <span className="text-blue-600 hover:text-blue-800 transition-colors duration-150">Login</span>;
 
+    /*
     const floatVariants = {
         // Defines the keyframes for the continuous floating motion
         float: {
@@ -78,6 +79,8 @@ const AuthPage: React.FC = () => {
             },
         },
     };
+    */
+   
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-800 font-sans p-4 overflow-hidden">
             
