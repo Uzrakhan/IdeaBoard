@@ -59,28 +59,8 @@ const AuthPage: React.FC = () => {
         ? <span className="text-blue-600 hover:text-blue-800 transition-colors duration-150">Sign Up</span> 
         : <span className="text-blue-600 hover:text-blue-800 transition-colors duration-150">Login</span>;
 
-    /*
-    const floatVariants = {
-        // Defines the keyframes for the continuous floating motion
-        float: {
-            y: [0, -10, 0, 10, 0], // Move up 10px, back to center, down 10px, back to center
-            opacity: [1, 0.8, 1, 0.9, 1], // Subtle opacity change for depth/flow
-            transition: {
-                y: {
-                    duration: 6,
-                    ease: "easeInOut",
-                    repeat: Infinity, // Loop continuously
-                },
-                opacity: {
-                    duration: 6,
-                    ease: "easeInOut",
-                    repeat: Infinity,
-                }
-            },
-        },
-    };
-    */
-   
+    // ... (floatVariants commented out code remains the same)
+    
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-800 font-sans p-4 overflow-hidden">
             
@@ -94,7 +74,7 @@ const AuthPage: React.FC = () => {
                         background: 'linear-gradient(135deg, #a7b6ff 0%, #ffc6a7 50%, #ff5e62 100%)',
                     }}
                 >
-                    
+                    {/* Test credentials can also go here for better visibility on desktop */}
                 </div>
 
                 {/* 3. Right Side: Login/Sign Up Form (Tighter Padding) */}
@@ -103,6 +83,15 @@ const AuthPage: React.FC = () => {
                         {isLogin ? 'Login' : 'Sign Up'}
                     </h2>
                     
+                    {/* ⭐ TEST CREDENTIALS DISPLAY BLOCK ⭐ */}
+                    {isLogin && (
+                        <div className="text-xs p-3 mb-4 rounded-lg bg-yellow-50 border border-yellow-200 text-yellow-800">
+                            <p className="font-semibold mb-1">Demo Credentials:</p>
+                            <p>Username: <code className="font-mono text-gray-700">Test098</code></p>
+                            <p>Password: <code className="font-mono text-gray-700">Test098#</code></p>
+                        </div>
+                    )}
+
                     {/* Message Area */}
                     {message && (
                         <div className={`p-2 mb-4 rounded-lg text-sm font-medium text-center ${message.includes('successful') ? 'bg-green-100 text-green-700 border border-green-300' : 'bg-red-100 text-red-700 border border-red-300'}`}>
