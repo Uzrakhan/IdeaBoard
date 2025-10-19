@@ -6,7 +6,19 @@ import RoomAdminPanel from './RoomAdminPanel';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getRoom } from '../api';
 import { toast } from 'react-toastify';
-import { Pen, Eraser, Circle, RectangleHorizontal, PanelRight  } from 'lucide-react';
+import { 
+    Pen, 
+    Eraser, 
+    Circle, 
+    RectangleHorizontal, 
+    PanelRight, 
+    Trash2,
+    Users,
+    Copy,
+    Palette,
+    Settings,
+    Sparkles,
+      } from 'lucide-react';
 
 type Point = { x: number; y: number };
 type DrawingLine = {
@@ -596,173 +608,6 @@ const Whiteboard: React.FC = () => {
         return { x, y };
     };
 
-    /*
-    // Start drawing
-    const startDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
-        console.log(`DEBUG: Event Handler Triggered: startDrawing (type: ${e.type})`);
-        // Crucial: Use e.preventDefault() to block default browser behavior
-        // and check for the primary pointer to prevent multi-touch issues.
-        e.preventDefault();
-        e.stopPropagation();
-        if (!e.isPrimary) return;
-
-        if (!canDraw) {
-            toast.warn("You don't have permission to draw yet. Please wait for the room owner to approve your request.");
-            console.log("Drawing prevented: User does not have permission.");
-            return;
-        }
-
-        console.log('*** EVENT: startDrawing triggered! ***', e.type);
-        if ('touches' in e) {
-            e.preventDefault();
-        }
-
-        setIsDrawing(true);
-        const point = getCoordinates(e);
-
-        if(activeTool === "pen" || activeTool === "eraser") {
-            const newLine: DrawingLine = {
-                id: Date.now().toString() + Math.random().toString(36).substring(2,9),
-                type: activeTool,
-                points: [point],
-                color: activeTool === "eraser" ? '#FFFFFF' : colorRef.current,
-                width: brushSizeRef.current
-            };
-            linesRef.current = [...linesRef.current, newLine];
-            lastPointRef.current = point;
-
-            console.log("FRONTEND: Initial line added to linesRef:", linesRef.current.length, linesRef.current[linesRef.current.length - 1].id);
-            if (room && socket.connected) {
-                socket.emit('draw', newLine, room.roomCode);
-                console.log('*** SOCKET: Emitted initial line! ***', newLine.id);
-            }
-        } else if(activeTool === 'rectangle' || activeTool === 'circle'){
-            startPointRef.current = point;
-        }
-    };
-
-    // Draw while moving
-    const draw = (e: React.PointerEvent<HTMLCanvasElement>) => {
-        console.log(`DEBUG: Event Handler Triggered: draw (type: ${e.type})`);
-
-        console.log(`DEBUG DRAW CHECK: canDraw=${canDraw}, isDrawing=${isDrawing}, lastPointRef.current=${lastPointRef.current ? 'true' : 'false'}`);
-        e.preventDefault();
-        e.stopPropagation()
-
-        if (!canDraw || !isDrawing) return;
-
-        console.log('*** EVENT: draw (mousemove/touchmove) triggered! ***', e.type);
-
-        const canvas = canvasRef.current;
-        const ctx = ctxRef.current; // Use the stored context
-
-        // --- NEW LOGS HERE ---
-        console.log(`DEBUG DRAW CHECK: canvasRef.current=${canvas ? 'true' : 'false'}, ctxRef.current=${ctx ? 'true' : 'false'}`);
-        // --- END NEW LOGS ---
-
-        if (!canvas || !ctx) {
-            console.warn("DRAW Function: Early exit due to missing canvas or context."); // <-- NEW LOG
-            return;
-        }
-
-        const point = getCoordinates(e);
-
-        if (activeTool === "pen"|| activeTool === "eraser") {
-            const lastLine = linesRef.current[linesRef.current.length - 1];
-
-            // Ensure lastLine exists and has a points array
-            if (!lastLine || !lastLine.points) {
-                console.warn("DRAW Function: Cannot update line. Last line is not a pen/eraser line or has no points.");
-                return;
-            }
-
-            // Correctly update the points array
-            const updatedLine: DrawingLine = {
-                ...lastLine,
-                points: [...lastLine.points, point]
-            };
-            linesRef.current[linesRef.current.length - 1] = updatedLine;
-            ctx.beginPath();
-            ctx.lineWidth = brushSizeRef.current;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            ctx.strokeStyle = activeTool === 'eraser' ? '#FFFFFF' : colorRef.current;
-            ctx.moveTo(lastPointRef.current!.x, lastPointRef.current!.y);
-            ctx.lineTo(point.x, point.y);
-            ctx.stroke();
-            console.log('*** CANVAS: Local drawing stroke performed! ***');
-            if (room && socket.connected) {
-                socket.emit('draw', updatedLine, room.roomCode);
-            }
-        }else if(activeTool === 'rectangle' || activeTool === 'circle'){
-                // Redraw canvas with temporary shape for real-time feedback
-                redrawCanvas();
-                ctx.beginPath();
-                ctx.strokeStyle = colorRef.current;
-                ctx.lineWidth = brushSizeRef.current;
-
-                if (activeTool === 'rectangle') {
-                    const width = point.x - startPointRef.current!.x;
-                    const height = point.y - startPointRef.current!.y;
-                    ctx.strokeRect(startPointRef.current!.x, startPointRef.current!.y, width, height);
-                } else if (activeTool === 'circle') {
-                    const dx = point.x - startPointRef.current!.x;
-                    const dy = point.y - startPointRef.current!.y;
-                    const radius = Math.sqrt(dx * dx + dy * dy);
-                    ctx.arc(startPointRef.current!.x, startPointRef.current!.y, radius, 0, 2 * Math.PI);
-                    ctx.stroke();
-                }
-            }
-            // ✅ The crucial fix: Always update lastPointRef.current at the end of the function
-        lastPointRef.current = point;
-    };
-
-    // Stop drawing
-    const endDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
-        console.log('DEBUG: Event Handler Triggered: endDrawing');
-        e.preventDefault();
-        e.stopPropagation()
-        if (!canDraw || !isDrawing) { // Add this line if it's not there
-            return;
-        }
-        console.log('*** EVENT: endDrawing triggered! ***');
-
-        if (activeTool === 'rectangle' || activeTool === 'circle') {
-            if (!startPointRef.current || !lastPointRef.current) return;
-            const newShape: DrawingLine = {
-                id: Date.now().toString(),
-                type: activeTool,
-                startPoint: startPointRef.current,
-                endPoint: lastPointRef.current,
-                color: colorRef.current,
-                width: brushSizeRef.current
-            };
-            linesRef.current = [...linesRef.current, newShape];
-
-            // ✅ Add a null check for 'room' before attempting to use it
-            if (room && socket.connected) {
-                socket.emit('draw', newShape, room.roomCode)
-            }
-
-            // NEW HISTORY LOGIC
-            // If the history is not at the end, truncate it before adding the new state
-            historyRef.current = historyRef.current.slice(0, historyRefIndex.current + 1);
-
-            // Push the new state onto the history stack
-            historyRef.current.push(JSON.parse(JSON.stringify(linesRef.current)));
-
-            // Update the history index
-            historyRefIndex.current = historyRef.current.length - 1;
-
-            if (activeTool === 'rectangle' || activeTool === 'circle') {
-                redrawCanvas();
-            }
-        }
-        setIsDrawing(false);
-        lastPointRef.current = null;
-        startPointRef.current = null;
-    };
-    */
 
     // Clear the board
     const clearBoard = () => {
@@ -786,27 +631,7 @@ const Whiteboard: React.FC = () => {
         }
     };
 
-    /*
-    // Touch event handlers
-    const handleTouchStart = (e: React.TouchEvent) => {
-        console.log('DEBUG: Event Handler Triggered: handleTouchStart'); // <-- ADD THIS LOG
-        if (!canDraw) {
-            toast.warn("You don't have permission to draw yet. Please wait for the room owner to approve your request.");
-            return;
-        }
-        e.preventDefault();
-        startDrawing(e);
-    };
 
-    const handleTouchMove = (e: React.TouchEvent) => {
-        console.log('DEBUG: Event Handler Triggered: handleTouchMove'); // <-- ADD THIS LOG
-        if (!canDraw) {
-            return;
-        }
-        e.preventDefault();
-        draw(e);
-    };
-    */
 
 
     // Display a message if drawing is not allowed
@@ -850,106 +675,140 @@ const Whiteboard: React.FC = () => {
 
 
     return (
-        <div className='bg-gray-100 min-h-screen font-inter'>
+        <div className='min-h-screen bg-gradient-to-br from-slate-50 via-white to-violet-50'>
             <div className='max-w-7xl mx-auto px-4 py-6'>
-                <div className='bg-white rounded-xl shadow-md mb-6 p-4'>
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
-                        <div>
-                            <h1 className='text-xl font-bold text-gray-800'>
-                                Collaboration Room: <span className='text-indigo-600'>
-                                    {room.roomCode}
-                                </span>
-                            </h1>
-                            <p className='text-gray-600'>
-                                Created by: {room.owner?.username ?? 'Unknown Owner'}
-                            </p>
+                {/* Room Header */}
+                <div className='bg-white rounded-2xl shadow-lg border border-slate-200/50 mb-6 p-6'>
+                    <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                        <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="p-2 bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-xl">
+                                    <Sparkles className="w-5 h-5 text-white" />
+                                </div>
+                                <div>
+                                    <h1 className='text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent'>
+                                        Room: <span className='bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent'>
+                                            {room.roomCode}
+                                        </span>
+                                    </h1>
+                                    <p className='text-slate-600 text-sm'>
+                                        Created by {room.owner?.username ?? 'Unknown'}
+                                    </p>
+                                </div>
+                            </div>
                         </div>
 
-                        <div className='mt-4 md:mt-0 flex items-center space-x-4'>
-                            <div className='flex space-x-2'>
-                                {room.members
-                                    .filter(m => m.status === "approved")
-                                    .slice(0, 3)
-                                    .map((member, index) => (
-                                        <div key={member.user._id || index} className='bg-indigo-100 w-8 h-8 rounded-full flex items-center justify-center border-2 border-white'>
-                                            <span className='text-indigo-700 text-xs font-medium'>
-                                                {member?.user?.username?.charAt(0)}
+                        <div className='flex items-center gap-4'>
+                            <div className='flex items-center gap-2'>
+                                <Users className="w-5 h-5 text-slate-500" />
+                                <div className='flex -space-x-2'>
+                                    {room.members
+                                        .filter(m => m.status === "approved")
+                                        .slice(0, 3)
+                                        .map((member, index) => (
+                                            <div key={member.user._id || index} className='w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br from-violet-400 to-fuchsia-400 border-2 border-white shadow-md'>
+                                                <span className='text-white text-sm font-bold'>
+                                                    {member?.user?.username?.charAt(0).toUpperCase()}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    {room.members.filter(m => m.status === "approved").length > 3 && (
+                                        <div className='w-10 h-10 rounded-full flex items-center justify-center bg-slate-200 border-2 border-white shadow-md'>
+                                            <span className='text-slate-600 text-sm font-bold'>
+                                                +{room.members.filter(m => m.status === "approved").length - 3}
                                             </span>
                                         </div>
-                                    ))}
-                                {room.members.filter(m => m.status === "approved").length > 3 && (
-                                    <div className='bg-gray-200 w-8 h-8 rounded-full flex items-center justify-center border-2 border-white'>
-                                        <span className='text-gray-600 text-xs'>
-                                            +{room.members.filter(m => m.status === "approved").length - 3}
-                                        </span>
-                                    </div>
-                                )}
+                                    )}
+                                </div>
                             </div>
                             <button
                                 onClick={handleInviteClick}
-                                className='bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1 rounded-full text-sm'
+                                className='flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-violet-500/50 transition-all duration-300 hover:scale-105'
                             >
-                                Invite
+                                <Copy className="w-4 h-4" />
+                                <span className="hidden sm:inline">Invite</span>
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <div className='bg-white rounded-xl shadow-md p-4 mb-6'>
-                    <div className='flex flex-wrap gap-4'>
-                        {/* Pen/Eraser/Color/Size Controls */}
-                        {/* Only show these controls if the user *can* draw */}
+                {/* Tools and Canvas Area */}
+                <div className='bg-white rounded-2xl shadow-lg border border-slate-200/50 p-6'>
+                    {/* Toolbar */}
+                    <div className='flex flex-wrap items-center gap-3 mb-6 pb-6 border-b border-slate-200'>
                         {canDraw && (
                             <>
-                                <div className="flex items-center space-x-2">
+                                {/* Drawing Tools */}
+                                <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-xl">
                                     <button
-                                        onClick={() => { 
-                                            setColor('#000000')
+                                        onClick={() => {
+                                            setColor('#000000');
                                             setActiveTool('pen');
                                         }}
-                                        className={`p-2 rounded ${activeTool === 'pen' ? 'bg-indigo-200' : 'bg-gray-200'}`}
-                                        title="Black Pen"
+                                        className={`p-3 rounded-lg transition-all duration-200 ${
+                                            activeTool === 'pen'
+                                                ? 'bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white shadow-md'
+                                                : 'bg-white text-slate-700 hover:bg-slate-100'
+                                        }`}
+                                        title="Pen"
                                     >
-                                        <Pen className="w-5 h-5 text-gray-700" />
+                                        <Pen className="w-5 h-5" />
                                     </button>
                                     <button
                                         onClick={() => {
-                                            setColor('#FFFFFF')
+                                            setColor('#FFFFFF');
                                             setActiveTool('eraser');
                                         }}
-                                        className={`p-2 rounded ${activeTool === 'eraser' ? 'bg-indigo-200' : 'bg-gray-200'}`}
-                                        title="Eraser (White)"
+                                        className={`p-3 rounded-lg transition-all duration-200 ${
+                                            activeTool === 'eraser'
+                                                ? 'bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white shadow-md'
+                                                : 'bg-white text-slate-700 hover:bg-slate-100'
+                                        }`}
+                                        title="Eraser"
                                     >
-                                        <Eraser className="w-5 h-5 text-gray-700" />
+                                        <Eraser className="w-5 h-5" />
                                     </button>
                                     <button
-                                        onClick={() => {
-                                            setActiveTool('rectangle')
-                                        }}
-                                        className={`p-2 rounded ${activeTool === 'rectangle' ? 'bg-indigo-200' : 'bg-gray-200'}`}
-                                        title='Rectangle Tool'
+                                        onClick={() => setActiveTool('rectangle')}
+                                        className={`p-3 rounded-lg transition-all duration-200 ${
+                                            activeTool === 'rectangle'
+                                                ? 'bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white shadow-md'
+                                                : 'bg-white text-slate-700 hover:bg-slate-100'
+                                        }`}
+                                        title='Rectangle'
                                     >
-                                        <RectangleHorizontal className="w-5 h-5 text-gray-700" />
+                                        <RectangleHorizontal className="w-5 h-5" />
                                     </button>
                                     <button
                                         onClick={() => setActiveTool('circle')}
-                                        className={`p-2 rounded ${activeTool === 'circle' ? 'bg-indigo-200' : 'bg-gray-200'}`}
-                                        title="Circle Tool"
+                                        className={`p-3 rounded-lg transition-all duration-200 ${
+                                            activeTool === 'circle'
+                                                ? 'bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white shadow-md'
+                                                : 'bg-white text-slate-700 hover:bg-slate-100'
+                                        }`}
+                                        title="Circle"
                                     >
-                                        <Circle className="w-5 h-5 text-gray-700" />
+                                        <Circle className="w-5 h-5" />
                                     </button>
+                                </div>
+
+                                {/* Color Picker */}
+                                <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-xl">
+                                    <Palette className="w-5 h-5 text-slate-600" />
                                     <input
                                         type='color'
                                         value={color}
-                                        className='w-8 h-8 border-0 cursor-pointer rounded-full overflow-hidden'
+                                        className='w-12 h-10 border-2 border-slate-200 cursor-pointer rounded-lg overflow-hidden bg-white'
                                         onChange={(e) => setColor(e.target.value)}
-                                        title="Custom Color"
+                                        title="Color Picker"
                                     />
                                 </div>
 
-                                <div className="flex items-center space-x-2">
+                                {/* Brush Size */}
+                                <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-xl">
+                                    <Settings className="w-5 h-5 text-slate-600" />
                                     <select
-                                        className='border border-gray-300 rounded px-2 py-1 text-sm text-gray-700 focus:ring-indigo-500 focus:border-indigo-500'
+                                        className='px-4 py-2 border-2 border-slate-200 rounded-lg text-sm text-slate-700 font-medium bg-white focus:ring-2 focus:ring-violet-500 focus:border-violet-500 cursor-pointer'
                                         value={brushSize}
                                         onChange={(e) => setBrushSize(Number(e.target.value))}
                                         title="Brush Size"
@@ -960,45 +819,60 @@ const Whiteboard: React.FC = () => {
                                     </select>
                                 </div>
 
-                                <div className='flex items-center space-x-2'>
-                                    <button
-                                        className='bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm font-medium shadow-md'
-                                        onClick={clearBoard}
-                                        title="Clear Board"
-                                    >
-                                        Clear Board
-                                    </button>
-                                </div>
+                                {/* Clear Button */}
+                                <button
+                                    className='flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-red-500 to-rose-500 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-red-500/50 transition-all duration-300 hover:scale-105'
+                                    onClick={clearBoard}
+                                    title="Clear Board"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                    <span className="hidden sm:inline">Clear</span>
+                                </button>
                             </>
                         )}
+
+                        {/* Admin Panel Toggle */}
                         {isOwner && (
-                            <div className='relative'>
+                            <div className='relative ml-auto'>
                                 <button
                                     onClick={() => setIsPanelOpen(!isPanelOpen)}
-                                    className={`p-2 rounded-lg ml-auto transition-colors ${isPanelOpen ? 'bg-indigo-200 text-indigo-800' : 'bg-gray-200 text-gray-700'}`}
+                                    className={`p-3 rounded-xl transition-all duration-300 ${
+                                        isPanelOpen
+                                            ? 'bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white shadow-lg'
+                                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                                    }`}
                                     title='Admin Panel'
                                 >
-                                    <PanelRight className='w-5 h-5'/>
+                                    <PanelRight className='w-5 h-5' />
                                 </button>
                                 {pendingRequestsCount > 0 && (
-                                    <span className='absolute top-0 right-0 inline-flex items-center justify-center h-4 w-4 text-xs font-bold leading-none text-red-100 transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full'>
+                                    <span className='absolute -top-1 -right-1 inline-flex items-center justify-center h-6 w-6 text-xs font-bold text-white bg-gradient-to-br from-red-500 to-rose-500 rounded-full shadow-lg animate-pulse'>
                                         {pendingRequestsCount}
                                     </span>
                                 )}
                             </div>
                         )}
-                        {renderDrawingPermissionMessage()}
+
+                        {/* Permission Message */}
+                        {!canDraw && (
+                            <div className="w-full">
+                                {renderDrawingPermissionMessage()}
+                            </div>
+                        )}
                     </div>
 
-                    {/* Main drawing and admin panel area */}
-                    <div className='flex flex-col md:flex-row h-[70vh]'>
+                    {/* Canvas and Admin Panel Container */}
+                    <div className='flex flex-col lg:flex-row gap-6 min-h-[70vh]'>
+                        {/* Canvas Container */}
                         <div
                             ref={containerRef}
-                            className={`relative bg-white rounded-xl shadow-md ${isPanelOpen ? 'md:w-3/4' : 'w-full'} transition-all duration-300 ease-in-out`}
+                            className={`relative bg-gradient-to-br from-slate-50 to-white rounded-2xl shadow-inner border-2 border-slate-200 overflow-hidden transition-all duration-300 ${
+                                isPanelOpen ? 'lg:w-2/3' : 'w-full'
+                            }`}
                         >
                             <canvas
                                 ref={canvasRef}
-                                className='w-full h-full cursor-crosshair drawing-canvas'
+                                className='w-full h-full cursor-crosshair'
                                 style={{
                                     touchAction: 'none',
                                     userSelect: 'none',
@@ -1006,10 +880,26 @@ const Whiteboard: React.FC = () => {
                                     WebkitTouchCallout: 'none'
                                 }}
                             />
+                            
+                            {/* Canvas Watermark */}
+                            {!canDraw && (
+                                <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                                    <div className="bg-slate-900/5 backdrop-blur-sm px-6 py-3 rounded-xl border border-slate-300/50">
+                                        <p className="text-slate-500 font-medium">View Only Mode</p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
-                        {/* The side panel */}
+
+                        {/* Admin Panel */}
                         {isOwner && isPanelOpen && (
-                            <div className="md:w-1/4 md:border-l md:border-gray-200 p-4 overflow-y-auto bg-white rounded-xl shadow-md ml4 mt-4 md:mt-0">
+                            <div className="lg:w-1/3 bg-gradient-to-br from-slate-50 to-white rounded-2xl shadow-lg border border-slate-200 p-6 overflow-y-auto max-h-[70vh]">
+                                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-200">
+                                    <div className="p-2 bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-lg">
+                                        <Settings className="w-5 h-5 text-white" />
+                                    </div>
+                                    <h2 className="text-xl font-bold text-slate-800">Admin Panel</h2>
+                                </div>
                                 <RoomAdminPanel room={room} setCurrentRoom={setRoom} />
                             </div>
                         )}

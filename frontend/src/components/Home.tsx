@@ -1,129 +1,381 @@
-import { Link } from 'react-router-dom';
-import IdeaBoard from '../assets/IdeaBoard.png'
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { Sparkles, Zap, Users, Palette, Code, Layers } from 'lucide-react';
 
-const Home: React.FC = () => {
+const Home = () => {
+  const fadeInUp = {
+    initial: { opacity: 0, y: 60 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.6, ease: "easeOut" }
+  };
+
+  const staggerContainer = {
+    animate: {
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const scaleIn = {
+    initial: { opacity: 0, scale: 0.8 },
+    animate: { opacity: 1, scale: 1 },
+    transition: { duration: 0.5 }
+  };
+
+  const floatingAnimation = {
+    y: [0, -20, 0],
+    transition: {
+      duration: 3,
+      repeat: Infinity,
+      ease: "easeInOut"
+    }
+  };
+
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      {/* Hero Section */}
-      <section className="py-16 md:py-24 flex flex-col md:flex-row items-center">
-        <div className="md:w-1/2 mb-10 md:mb-0">
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6">
-            Collaborate in <span className="text-indigo-600">Real-Time</span>
-          </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-lg">
-            Brainstorm, plan, and create together on a shared digital whiteboard
-          </p>
-          <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
-            <Link 
-              to="/create-room" 
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-lg text-center transition-colors"
+    <div className="max-w-7xl mx-auto px-4 py-8 overflow-hidden bg-white">
+      {/* Hero Section with Gradient Background */}
+      <section className="relative py-20 md:py-32">
+        {/* Animated Background Elements */}
+        <motion.div 
+          className="absolute top-20 right-10 w-72 h-72 bg-gradient-to-br from-violet-400/20 to-fuchsia-400/20 rounded-full blur-3xl"
+          animate={{
+            scale: [1, 1.2, 1],
+            opacity: [0.3, 0.5, 0.3],
+          }}
+          transition={{
+            duration: 8,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+        />
+        <motion.div 
+          className="absolute bottom-10 left-10 w-96 h-96 bg-gradient-to-tr from-cyan-400/20 to-blue-400/20 rounded-full blur-3xl"
+          animate={{
+            scale: [1, 1.3, 1],
+            opacity: [0.3, 0.5, 0.3],
+          }}
+          transition={{
+            duration: 10,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 1
+          }}
+        />
+
+        <div className="relative flex flex-col md:flex-row items-center gap-12">
+          <motion.div 
+            className="md:w-1/2 z-10"
+            initial="initial"
+            animate="animate"
+            variants={staggerContainer}
+          >
+            <motion.div variants={fadeInUp} className="inline-flex items-center gap-2 bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10 border border-violet-500/20 rounded-full px-4 py-2 mb-6">
+              <Sparkles className="w-4 h-4 text-violet-600" />
+              <span className="text-sm font-medium bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent">
+                Powered by Modern Web Tech
+              </span>
+            </motion.div>
+
+            <motion.h1 
+              variants={fadeInUp}
+              className="text-5xl md:text-7xl font-bold mb-6"
             >
-              Create a Room
-            </Link>
-            <Link 
-              to="/features" 
-              className="border-2 border-indigo-600 text-indigo-600 hover:bg-indigo-50 font-medium py-3 px-6 rounded-lg text-center transition-colors"
+              <span className="bg-gradient-to-r from-slate-900 via-violet-800 to-slate-900 bg-clip-text text-transparent">
+                Collaborate in
+              </span>
+              <br />
+              <span className="bg-gradient-to-r from-violet-600 via-fuchsia-600 to-cyan-600 bg-clip-text text-transparent">
+                Real-Time
+              </span>
+            </motion.h1>
+
+            <motion.p 
+              variants={fadeInUp}
+              className="text-xl text-slate-600 mb-8 max-w-lg leading-relaxed"
             >
-              Learn More
-            </Link>
-          </div>
-        </div>
-        <div className="md:w-1/2 flex justify-center">
-          <div className="bg-gray-200 border-2 border-dashed rounded-xl w-full h-80 md:h-96">
-            <img src={IdeaBoard} className='rounded-xl'/>
-          </div>
+              Experience seamless collaboration with a beautifully crafted digital whiteboard. Built with cutting-edge frontend technologies.
+            </motion.p>
+
+            <motion.div 
+              variants={fadeInUp}
+              className="flex flex-col sm:flex-row gap-4"
+            >
+              <button className="group relative bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-semibold py-4 px-8 rounded-xl text-center transition-all duration-300 hover:shadow-lg hover:shadow-violet-500/50 hover:scale-105">
+                <span className="relative z-10">Create a Room</span>
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-fuchsia-600 to-violet-600 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"
+                />
+              </button>
+              <button className="group border-2 border-slate-300 text-slate-700 hover:border-violet-600 hover:text-violet-600 font-semibold py-4 px-8 rounded-xl text-center transition-all duration-300 hover:shadow-md hover:scale-105 bg-white/50 backdrop-blur-sm">
+                Explore Features
+              </button>
+            </motion.div>
+
+            {/* Tech Stack Badges */}
+            <motion.div 
+              variants={fadeInUp}
+              className="flex flex-wrap gap-3 mt-8"
+            >
+              {['React', 'TypeScript', 'Framer Motion', 'Tailwind'].map((tech, i) => (
+                <motion.span
+                  key={tech}
+                  className="px-3 py-1 bg-slate-100 text-slate-700 text-sm rounded-full border border-slate-200"
+                  whileHover={{ scale: 1.1, backgroundColor: '#f1f5f9' }}
+                  transition={{ delay: i * 0.1 }}
+                >
+                  {tech}
+                </motion.span>
+              ))}
+            </motion.div>
+          </motion.div>
+
+          <motion.div 
+            className="md:w-1/2 flex justify-center relative"
+            initial={{ opacity: 0, x: 100 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, delay: 0.3 }}
+          >
+            <motion.div 
+              className="relative w-full max-w-lg"
+              animate={floatingAnimation}
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-violet-500/30 to-fuchsia-500/30 rounded-2xl blur-2xl" />
+              <div className="relative bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl shadow-2xl border border-slate-200/50 w-full h-80 flex items-center justify-center">
+                <div className="text-center p-8">
+                  <Palette className="w-16 h-16 mx-auto mb-4 text-violet-600" />
+                  <p className="text-slate-600 font-medium">Your IdeaBoard Preview</p>
+                </div>
+              </div>
+              {/* Decorative Elements */}
+              <motion.div
+                className="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-2xl opacity-80"
+                animate={{ rotate: [0, 180, 360] }}
+                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+              />
+              <motion.div
+                className="absolute -bottom-4 -left-4 w-20 h-20 bg-gradient-to-br from-fuchsia-400 to-violet-500 rounded-full opacity-80"
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              />
+            </motion.div>
+          </motion.div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="py-16">
-        <h2 className="text-3xl font-bold text-center text-gray-800 mb-12">
-          Powerful Collaboration Features
-        </h2>
+      <section className="py-20">
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-16"
+        >
+          <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent mb-4">
+            Powerful Collaboration Features
+          </h2>
+          <p className="text-slate-600 text-lg max-w-2xl mx-auto">
+            Everything you need for seamless team collaboration, beautifully designed
+          </p>
+        </motion.div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <motion.div 
+          className="grid grid-cols-1 md:grid-cols-3 gap-8"
+          initial="initial"
+          whileInView="animate"
+          viewport={{ once: true }}
+          variants={staggerContainer}
+        >
           {[
             {
               title: "Real-Time Drawing",
-              description: "Draw together in real-time with multiple collaborators",
-              icon: "✏️"
+              description: "Draw together with zero latency. Watch ideas come to life as your team collaborates seamlessly.",
+              icon: Palette,
+              gradient: "from-violet-500 to-purple-500"
             },
             {
-              title: "Unlimited Boards",
-              description: "Create as many boards as you need for your projects",
-              icon: "📋"
+              title: "Infinite Canvas",
+              description: "No limits to your creativity. Scale your boards infinitely and organize ideas effortlessly.",
+              icon: Layers,
+              gradient: "from-cyan-500 to-blue-500"
             },
             {
-              title: "Easy Sharing",
-              description: "Share rooms with a simple link or invite via email",
-              icon: "🔗"
+              title: "Instant Sharing",
+              description: "Share with a click. Invite collaborators via link or email and start working together instantly.",
+              icon: Zap,
+              gradient: "from-fuchsia-500 to-pink-500"
             }
-          ].map((feature, index) => (
-            <div 
-              key={index} 
-              className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow"
-            >
-              <div className="text-4xl mb-4">{feature.icon}</div>
-              <h3 className="text-xl font-semibold text-gray-800 mb-2">{feature.title}</h3>
-              <p className="text-gray-600">{feature.description}</p>
-            </div>
-          ))}
-        </div>
+          ].map((feature, index) => {
+            const IconComponent = feature.icon;
+            return (
+              <motion.div 
+                key={index}
+                variants={scaleIn}
+                whileHover={{ y: -8, transition: { duration: 0.3 } }}
+                className="group relative bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-slate-200/50 overflow-hidden"
+              >
+                <motion.div 
+                  className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-300`}
+                />
+                <div className={`relative inline-flex p-4 bg-gradient-to-br ${feature.gradient} rounded-2xl mb-6 shadow-lg`}>
+                  <IconComponent className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-slate-800 mb-3">{feature.title}</h3>
+                <p className="text-slate-600 leading-relaxed">{feature.description}</p>
+              </motion.div>
+            );
+          })}
+        </motion.div>
       </section>
 
+      {/* Developer Showcase */}
+      <motion.section 
+        className="py-20 my-16 relative"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.8 }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-50 to-violet-50 rounded-3xl" />
+        <div className="relative p-12">
+          <div className="text-center mb-12">
+            <motion.div
+              initial={{ scale: 0 }}
+              whileInView={{ scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ type: "spring", stiffness: 200, delay: 0.2 }}
+              className="inline-flex p-4 bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-2xl mb-6"
+            >
+              <Code className="w-10 h-10 text-white" />
+            </motion.div>
+            <h2 className="text-4xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent mb-4">
+              Crafted with Modern Tech
+            </h2>
+            <p className="text-slate-600 text-lg max-w-3xl mx-auto">
+              Built by a passionate frontend developer using the latest web technologies. 
+              Every animation, interaction, and pixel is thoughtfully designed.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
+            {[
+              { name: 'React 18', icon: '⚛️' },
+              { name: 'TypeScript', icon: '📘' },
+              { name: 'Framer Motion', icon: '🎬' },
+              { name: 'Tailwind CSS', icon: '🎨' }
+            ].map((tech, i) => (
+              <motion.div
+                key={tech.name}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                whileHover={{ scale: 1.05 }}
+                className="bg-white p-6 rounded-xl shadow-md text-center border border-slate-200/50"
+              >
+                <div className="text-4xl mb-3">{tech.icon}</div>
+                <p className="font-semibold text-slate-800">{tech.name}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </motion.section>
+
       {/* Testimonials */}
-      <section className="py-16 bg-indigo-50 rounded-2xl my-12 p-8">
-        <h2 className="text-3xl font-bold text-center text-gray-800 mb-12">
+      <motion.section 
+        className="py-20"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.8 }}
+      >
+        <h2 className="text-4xl font-bold text-center bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent mb-16">
           What Our Users Say
         </h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           {[
             {
-              quote: "IdeaBoard has transformed our remote brainstorming sessions. It's like we're all in the same room!",
+              quote: "IdeaBoard has transformed our remote brainstorming sessions. The interface is incredibly intuitive and beautiful!",
               author: "Sarah Johnson",
               role: "Product Manager"
             },
             {
-              quote: "The real-time collaboration features saved our team hours of back-and-forth. Highly recommend!",
+              quote: "The attention to detail in the animations and user experience is outstanding. It's our go-to collaboration tool.",
               author: "Michael Chen",
               role: "Engineering Lead"
             }
           ].map((testimonial, index) => (
-            <div 
-              key={index} 
-              className="bg-white p-6 rounded-xl shadow-sm"
+            <motion.div 
+              key={index}
+              initial={{ opacity: 0, x: index === 0 ? -50 : 50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: index * 0.2 }}
+              whileHover={{ scale: 1.02 }}
+              className="bg-white p-8 rounded-2xl shadow-lg border border-slate-200/50"
             >
-              <p className="text-gray-600 mb-4 italic">"{testimonial.quote}"</p>
+              <div className="flex gap-1 mb-4">
+                {[...Array(5)].map((_, i) => (
+                  <motion.span
+                    key={i}
+                    initial={{ opacity: 0, scale: 0 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.5 + i * 0.1 }}
+                    className="text-yellow-400 text-xl"
+                  >
+                    ★
+                  </motion.span>
+                ))}
+              </div>
+              <p className="text-slate-600 mb-6 text-lg leading-relaxed italic">"{testimonial.quote}"</p>
               <div className="flex items-center">
-                <div className="bg-gray-200 border-2 border-dashed rounded-xl w-12 h-12" />
+                <div className="w-14 h-14 bg-gradient-to-br from-violet-400 to-fuchsia-400 rounded-full flex items-center justify-center text-white font-bold text-xl">
+                  {testimonial.author[0]}
+                </div>
                 <div className="ml-4">
-                  <p className="font-medium text-gray-800">{testimonial.author}</p>
-                  <p className="text-sm text-gray-500">{testimonial.role}</p>
+                  <p className="font-semibold text-slate-800 text-lg">{testimonial.author}</p>
+                  <p className="text-slate-500">{testimonial.role}</p>
                 </div>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
-      </section>
+      </motion.section>
 
       {/* CTA Section */}
-      <section className="py-16 text-center">
-        <h2 className="text-3xl font-bold text-gray-800 mb-4">
-          Ready to Get Started?
-        </h2>
-        <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-          Join thousands of teams already using IdeaBoard to power their collaboration
-        </p>
-        <Link 
-          to="/create-room" 
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-8 rounded-lg text-lg inline-block transition-colors"
-        >
-          Create Your First Room
-        </Link>
-      </section>
+      <motion.section 
+        className="py-20 text-center relative"
+        initial={{ opacity: 0, y: 40 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.8 }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-br from-violet-600 to-fuchsia-600 rounded-3xl opacity-95" />
+        <div className="relative p-16 text-white">
+          <motion.div
+            initial={{ scale: 0.8 }}
+            whileInView={{ scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ type: "spring", stiffness: 150 }}
+          >
+            <Users className="w-16 h-16 mx-auto mb-6" />
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+              Ready to Get Started?
+            </h2>
+            <p className="text-xl mb-10 max-w-2xl mx-auto opacity-90">
+              Join thousands of teams already using IdeaBoard to power their collaboration
+            </p>
+            <button className="inline-block bg-white text-violet-600 font-bold py-4 px-10 rounded-xl text-lg transition-all duration-300 hover:scale-105 hover:shadow-2xl">
+              Create Your First Room
+            </button>
+          </motion.div>
+        </div>
+      </motion.section>
     </div>
-  )
-}
+  );
+};
 
-export default Home
+export default Home;

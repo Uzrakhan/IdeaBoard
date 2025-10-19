@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/ReactToastify.css';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import Auth from './components/Auth';
 import { login } from './api';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Home from './components/Home';
+import AuthPage from './components/AuthPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import CreateRoomWrapper from './components/CreateRoomWrapper';
 import JoinRoomWrapper from './components/JoinRoomWrapper';
@@ -55,7 +55,7 @@ const AppRoutes = () => {
 
   return (
     <Routes>
-      <Route path='/auth' element={isAuthenticated ? <Navigate to="/" /> : <Auth />}/>
+      <Route path='/auth' element={isAuthenticated ? <Navigate to="/" /> : <AuthPage />}/>
       <Route path='/' element={<ProtectedRoute><Layout><Home /></Layout></ProtectedRoute>}/>
       <Route path='/create-room' element={<ProtectedRoute><Layout><CreateRoomWrapper /></Layout></ProtectedRoute>}/>
       <Route path="/join/:roomCode" element={<ProtectedRoute><Layout><JoinRoomWrapper /></Layout></ProtectedRoute>} />

@@ -3,6 +3,16 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { joinRoom } from '../api';
 import type { Room } from '../types';
 import { useAuth } from '../context/AuthContext';
+import {  
+  Users, 
+  CheckCircle, 
+  Clock, 
+  AlertCircle, 
+  ArrowRight, 
+  Sparkles,
+  Shield,
+  Send
+} from 'lucide-react';
 
 interface JoinRoomProps {
   room: Room;
@@ -16,33 +26,28 @@ const JoinRoom: React.FC<JoinRoomProps> = ({ room }) => {
   const userId = localStorage.getItem('userId');
   useAuth();
 
-  //safety check
-  if(!room || !room.owner || !room.members || !room.roomCode){
+  // Safety check
+  if (!room || !room.owner || !room.members || !room.roomCode) {
     return (
-      <div className='text-center mt-10 text-red-600'>
-        Error: Room details are incomplete or failed to load.
+      <div className='min-h-screen bg-gradient-to-br from-slate-50 via-white to-violet-50 flex items-center justify-center px-4'>
+        <div className='max-w-md w-full bg-white rounded-2xl shadow-xl border border-slate-200/50 p-8 text-center'>
+          <div className='inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-red-400 to-rose-500 rounded-full mb-4'>
+            <AlertCircle className='w-8 h-8 text-white' />
+          </div>
+          <h2 className='text-2xl font-bold text-slate-800 mb-2'>Room Error</h2>
+          <p className='text-slate-600'>Room details are incomplete or failed to load.</p>
+        </div>
       </div>
-    )
+    );
   }
 
-
-    // ✅ Debug logs
-  console.log('JoinRoom | Room:', room);
-  console.log('Owner:', room.owner);
-  console.log('Members:', room.members);
-
   const isOwner = room?.owner?._id === userId;
-
-  const isApprovedMember =
-  room?.members?.some(
+  const isApprovedMember = room?.members?.some(
     (m) => m?.user?._id === userId && m.status === 'approved'
   ) ?? false;
-
-  // Check if user already sent request
-  const hasPendingRequest =
-    room?.members?.some(
-      (m) => m?.user?._id === userId && m.status === 'pending'
-    ) ?? false;
+  const hasPendingRequest = room?.members?.some(
+    (m) => m?.user?._id === userId && m.status === 'pending'
+  ) ?? false;
 
   const handleJoinRequest = async () => {
     if (!roomCode) return;
@@ -64,21 +69,22 @@ const JoinRoom: React.FC<JoinRoomProps> = ({ room }) => {
     }
   }, [isApprovedMember, isOwner, navigate, room.roomCode]);
 
-  // ✅ Filter out the owner from members list
   const memberCount = room.members.filter(
     (m) => m.status === 'approved' && m.user._id !== room.owner._id
   ).length;
 
   if (error) {
     return (
-      <div className="max-w-md mx-auto px-4 py-12">
-        <div className="bg-white rounded-xl shadow-md p-6 text-center">
-          <div className="text-red-500 text-5xl mb-4">⚠️</div>
-          <h2 className="text-xl font-bold text-gray-800 mb-2">Room Not Found</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-violet-50 flex items-center justify-center px-4">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl border border-slate-200/50 p-8 text-center">
+          <div className='inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-red-400 to-rose-500 rounded-full mb-6'>
+            <AlertCircle className='w-8 h-8 text-white' />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-800 mb-3">Room Not Found</h2>
+          <p className="text-slate-600 mb-8">{error}</p>
           <button
             onClick={() => navigate('/')}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md"
+            className="px-6 py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-violet-500/50 transition-all duration-300 hover:scale-105"
           >
             Go to Home
           </button>
@@ -90,98 +96,148 @@ const JoinRoom: React.FC<JoinRoomProps> = ({ room }) => {
   if (!room) return null;
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-12 font-inter">
-      <div className="bg-white rounded-xl shadow-md p-6 md:p-8">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">
-            Join Collaboration Room
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-violet-50 px-4 py-12">
+      <div className="max-w-2xl mx-auto">
+        {/* Header */}
+        <div className='text-center mb-8'>
+          <div className='inline-flex items-center gap-2 bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10 border border-violet-500/20 rounded-full px-4 py-2 mb-6'>
+            <Sparkles className="w-4 h-4 text-violet-600" />
+            <span className="text-sm font-medium bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent">
+              Collaboration Space
+            </span>
+          </div>
+          <h1 className='text-4xl md:text-5xl font-bold mb-4'>
+            <span className='bg-gradient-to-r from-slate-900 via-violet-800 to-slate-900 bg-clip-text text-transparent'>
+              Join Room
+            </span>
           </h1>
-          <div className="text-indigo-600 font-mono text-lg bg-indigo-50 inline-block px-4 py-1 rounded-md">
-            {room.name || `Room ${room.roomCode}`}
-          </div>
         </div>
 
-        <div className="flex items-center bg-gray-50 rounded-lg p-6 mb-8">
-          <div className="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16 flex items-center justify-center">
-            <svg className="h-8 w-8 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-          </div>
-          <div className="ml-4">
-            <h3 className="font-medium text-gray-800 text-lg">
-              {room?.owner?.username || 'Room Owner'}
-            </h3>
-            <p className="text-gray-600 text-sm">Room Owner</p>
-          </div>
-        </div>
-
-        {error && (
-          <div className="mt-4 text-red-600 font-medium text-center mb-6">
-            {error}
-          </div>
-        )}
-
-        <p className="text-gray-600 text-center mb-6 text-base">
-          {isOwner
-            ? 'You are the owner of this room.'
-            : 'Request access to start collaboration'}
-        </p>
-
-        <div className="flex items-center justify-center text-gray-600 text-base mb-6">
-          <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-3-3H5a3 3 0 00-3 3v2h5m0 0a3 3 0 003 3h4a3 3 0 003-3m-7.5-2.5a3 3 0 11-6 0 3 3 0 016 0zm3.5 0a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-          <span>
-            {memberCount} members
-          </span>
-        </div>
-
-        {isOwner ? (
-          <div className="text-center">
-            <p className="text-gray-600 mb-4">
-              You own this room. You can manage access requests and start collaborating.
-            </p>
-            <button
-              onClick={() => navigate(`/room/${roomCode}`)}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-medium"
-            >
-              Go to Whiteboard
-            </button>
-          </div>
-        ) : isApprovedMember ? (
-          <div className="text-center">
-            <div className="text-green-600 bg-green-50 p-4 rounded-lg mb-6">
-              <svg className="w-6 h-6 mr-2 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              You're already a member of this room
+        {/* Main Card */}
+        <div className="bg-white rounded-2xl shadow-xl border border-slate-200/50 overflow-hidden">
+          {/* Room Code Banner */}
+          <div className="bg-gradient-to-r from-violet-600 to-fuchsia-600 px-8 py-6 text-center">
+            <p className="text-violet-100 text-sm font-medium mb-2">Room Code</p>
+            <div className="inline-block bg-white/20 backdrop-blur-sm px-6 py-3 rounded-xl border border-white/30">
+              <p className="text-white font-bold text-2xl tracking-wider">
+                {room.roomCode}
+              </p>
             </div>
-            <button
-              onClick={() => navigate(`/room/${roomCode}`)}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-medium"
-            >
-              Join Whiteboard
-            </button>
           </div>
-        ) : (
-          <div className="text-center">
-            {hasPendingRequest || showRequestSentMessage ? (
-              <div className="text-blue-600 bg-blue-50 p-4 rounded-lg mb-6 shadow-md">
-                <svg className="w-6 h-6 mr-2 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                  ⏳ Join request sent. Awaiting approval.
+
+          <div className="p-8 md:p-10">
+            {/* Room Owner Info */}
+            <div className="flex items-center bg-gradient-to-br from-slate-50 to-violet-50 rounded-xl p-6 mb-8 border border-slate-200/50">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-violet-600 to-fuchsia-600 rounded-full blur-md opacity-30" />
+                <div className="relative w-16 h-16 bg-gradient-to-br from-violet-600 to-fuchsia-600 rounded-full flex items-center justify-center shadow-lg">
+                  <span className="text-white font-bold text-2xl">
+                    {room?.owner?.username?.charAt(0).toUpperCase() || 'O'}
+                  </span>
+                </div>
+              </div>
+              <div className="ml-5 flex-1">
+                <h3 className="font-bold text-slate-800 text-xl mb-1">
+                  {room?.owner?.username || 'Room Owner'}
+                </h3>
+                <div className="flex items-center gap-2 text-slate-600">
+                  <Shield className="w-4 h-4 text-violet-600" />
+                  <span className="text-sm font-medium">Room Owner</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Member Count */}
+            <div className="flex items-center justify-center gap-3 mb-8 p-4 bg-slate-50 rounded-xl">
+              <div className="p-2 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-lg">
+                <Users className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-slate-800">{memberCount}</p>
+                <p className="text-sm text-slate-600">Active Members</p>
+              </div>
+            </div>
+
+            {/* Status/Action Area */}
+            {isOwner ? (
+              <div className="text-center">
+                <div className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl mb-6">
+                  <Shield className="w-5 h-5 text-green-600" />
+                  <p className="text-green-800 font-semibold">
+                    You own this room
+                  </p>
+                </div>
+                <p className="text-slate-600 mb-6">
+                  Manage access requests and start collaborating with your team
+                </p>
+                <button
+                  onClick={() => navigate(`/room/${roomCode}`)}
+                  className="group flex items-center justify-center gap-2 w-full px-8 py-4 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-bold rounded-xl hover:shadow-xl hover:shadow-violet-500/50 transition-all duration-300 hover:scale-105"
+                >
+                  <span>Go to Whiteboard</span>
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </button>
+              </div>
+            ) : isApprovedMember ? (
+              <div className="text-center">
+                <div className="inline-flex items-center gap-3 px-6 py-4 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl mb-6 shadow-sm">
+                  <CheckCircle className="w-6 h-6 text-green-600" />
+                  <p className="text-green-800 font-semibold">
+                    You're already a member of this room
+                  </p>
+                </div>
+                <button
+                  onClick={() => navigate(`/room/${roomCode}`)}
+                  className="group flex items-center justify-center gap-2 w-full px-8 py-4 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-bold rounded-xl hover:shadow-xl hover:shadow-violet-500/50 transition-all duration-300 hover:scale-105"
+                >
+                  <span>Join Whiteboard</span>
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </button>
               </div>
             ) : (
-              <button
-                onClick={handleJoinRequest}
-                className="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white px-6 py-3 rounded-lg font-medium w-full max-w-xs transition-all duration-200 ease-out transform hover:-translate-y-0.5 shadow-lg"
-              >
-                Request to Join
-              </button>
+              <div className="text-center">
+                {hasPendingRequest || showRequestSentMessage ? (
+                  <div className="inline-flex items-center gap-3 px-6 py-4 bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-xl shadow-sm animate-pulse">
+                    <Clock className="w-6 h-6 text-blue-600" />
+                    <div className="text-left">
+                      <p className="text-blue-800 font-semibold">Request Pending</p>
+                      <p className="text-blue-600 text-sm">Awaiting owner approval</p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-slate-600 mb-6">
+                      Request access from the room owner to start collaborating
+                    </p>
+                    <button
+                      onClick={handleJoinRequest}
+                      className="group flex items-center justify-center gap-2 w-full px-8 py-4 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-bold rounded-xl hover:shadow-xl hover:shadow-violet-500/50 transition-all duration-300 hover:scale-105"
+                    >
+                      <Send className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                      <span>Request to Join</span>
+                    </button>
+                  </>
+                )}
+              </div>
             )}
+
+            {/* Features Info */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8 pt-8 border-t border-slate-200">
+              {[
+                { icon: Users, text: 'Real-time collaboration', color: 'from-violet-500 to-purple-500' },
+                { icon: Sparkles, text: 'Instant updates', color: 'from-cyan-500 to-blue-500' },
+                { icon: Shield, text: 'Secure access', color: 'from-fuchsia-500 to-pink-500' }
+              ].map((feature, idx) => (
+                <div key={idx} className='text-center'>
+                  <div className={`inline-flex p-3 bg-gradient-to-br ${feature.color} rounded-xl mb-2`}>
+                    <feature.icon className='w-5 h-5 text-white' />
+                  </div>
+                  <p className='text-sm text-slate-600 font-medium'>{feature.text}</p>
+                </div>
+              ))}
+            </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
