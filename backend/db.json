@@ -1,0 +1,114 @@
+{
+  "rooms": {
+    "YXQE4E": {
+      "drawingLines": [
+        {
+          "id": "bot-line-5",
+          "type": "pen",
+          "points": [
+            {
+              "x": 50,
+              "y": 50
+            },
+            {
+              "x": 51,
+              "y": 51
+            }
+          ],
+          "color": "#FF0000",
+          "width": 5,
+          "sentTimestamp": 1759483213653
+        }
+      ]
+    },
+    "WO9UUT": {
+      "drawingLines": [
+        {
+          "id": "bot-line-5",
+          "type": "pen",
+          "points": [
+            {
+              "x": 50,
+              "y": 50
+            },
+            {
+              "x": 51,
+              "y": 51
+            }
+          ],
+          "color": "#FF0000",
+          "width": 5,
+          "sentTimestamp": 1759483720532
+        },
+        {
+          "id": "bot-line-3",
+          "type": "pen",
+          "points": [
+            {
+              "x": 50,
+              "y": 50
+            },
+            {
+              "x": 50,
+              "y": 50
+            }
+          ],
+          "color": "#FF0000",
+          "width": 5,
+          "sentTimestamp": 1759483720424
+        },
+        {
+          "id": "bot-line-2",
+          "type": "pen",
+          "points": [
+            {
+              "x": 50,
+              "y": 50
+            },
+            {
+              "x": 54,
+              "y": 54
+            }
+          ],
+          "color": "#FF0000",
+          "width": 5,
+          "sentTimestamp": 1759483719776
+        },
+        {
+          "id": "bot-line-4",
+          "type": "pen",
+          "points": [
+            {
+              "x": 50,
+              "y": 50
+            },
+            {
+              "x": 46,
+              "y": 46
+            }
+          ],
+          "color": "#FF0000",
+          "width": 5,
+          "sentTimestamp": 1759483719994
+        },
+        {
+          "id": "bot-line-1",
+          "type": "pen",
+          "points": [
+            {
+              "x": 50,
+              "y": 50
+            },
+            {
+              "x": 49,
+              "y": 49
+            }
+          ],
+          "color": "#FF0000",
+          "width": 5,
+          "sentTimestamp": 1759483720315
+        }
+      ]
+    }
+  }
+}
