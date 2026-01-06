@@ -1,4 +1,3 @@
-// src/server.ts
 /*
 console.log('--- ENTERING server.ts ---'); // DIAGNOSTIC LOG
 import express from 'express';
@@ -301,7 +300,6 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 // The actual server.listen call is now in index.ts
 export { app, io, connectedUsers, server };
 */
-
 
 // src/server.ts
 /*
@@ -972,9 +970,7 @@ export { app, io, connectedUsers, server };
 */
 
 
-
-
-
+//have to remove the above code
 // src/server.ts
 console.log('--- ENTERING server.ts ---'); // DIAGNOSTIC LOG
 import express from 'express';
