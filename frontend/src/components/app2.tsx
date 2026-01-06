@@ -1,3 +1,4 @@
+/*
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
     Pen,
@@ -364,7 +365,7 @@ const Whiteboard = () => {
     // ---------- JSX ----------
     return (
         <div className='w-full h-screen bg-gray-50 flex flex-col'>
-            {/* Top toolbar */}
+            {/* Top toolbar 
             <div className='bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between relative'>
                 <div className='flex items-center gap-2'>
                     <button className='p-2 rounded-lg hover:bg-gray-100'>
@@ -400,10 +401,10 @@ const Whiteboard = () => {
                     </button>
                 </div>
 
-                {/* Tool options panel */}
+                {/* Tool options panel 
                 {openPanel && ['pen', 'rectangle', 'circle'].includes(openPanel) && (
                     <div className='absolute left-4 top-16 bg-white rounded-lg shadow-lg border border-gray-200 p-4 z-50 w-64'>
-                        {/* Stroke color */}
+                        {/* Stroke color 
                         <div className='mb-4'>
                             <label className='text-xs font-medium text-gray-700 mb-2 block'>Stroke</label>
                             <div className='flex gap-1.5'>
@@ -435,7 +436,7 @@ const Whiteboard = () => {
                             </div>
                         </div>
 
-                        {/* Background color */}
+                        {/* Background color 
                         {openPanel !== 'pen' && (
                             <div className='mb-4'>
                                 <label className='text-xs font-medium text-gray-700 mb-2 block'>Background</label>
@@ -461,7 +462,7 @@ const Whiteboard = () => {
                             </div>
                         )}
 
-                        {/* Stroke width */}
+                        {/* Stroke width 
                         <div className='mb-4'>
                             <label className='text-xs font-medium text-gray-700 mb-2 block'>Stroke Width</label>
                             <div className='flex gap-2'>
@@ -488,7 +489,7 @@ const Whiteboard = () => {
                 )}
             </div>
 
-            {/* Canvas container */}
+            {/* Canvas container 
             <div ref={containerRef} className='flex-1 relative overflow-hidden bg-white'>
                 <canvas
                     ref={canvasRef}
@@ -498,7 +499,7 @@ const Whiteboard = () => {
                     }} 
                 />
 
-                {/* Grid */}
+                {/* Grid 
                 <div 
                     className='absolute inset-0 pointer-events-none opacity-10'
                     style={{
@@ -512,7 +513,7 @@ const Whiteboard = () => {
                 />
             </div>
 
-            {/* Bottom status bar */}
+            {/* Bottom status bar 
             <div className='bg-white border-t border-gray-200 px-4 py-2 flex items-center justify-between text-xs text-gray-600'>
                 <div className='flex items-center gap-4'>
                     <span>Zoom: {Math.round(zoom * 100)}%</span>
@@ -534,3 +535,4 @@ const Whiteboard = () => {
 };
 
 export default Whiteboard;
+*/

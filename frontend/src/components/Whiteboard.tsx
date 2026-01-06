@@ -6,13 +6,11 @@ import {
     Square,
     Trash2,
     Users,
-    Copy,
     Settings,
     Hand,
     ZoomIn,
     ZoomOut,
     Maximize2,
-    Lock,
     MousePointer2,
 } from 'lucide-react';
 import { socket } from '../socket';
@@ -52,8 +50,6 @@ const Whiteboard = () => {
     const [pendingRequests, setPendingRequests] = useState(0);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-    const [error, setError] = useState('');
-
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -61,8 +57,6 @@ const Whiteboard = () => {
     // --- States ---
     const [isDrawing, setIsDrawing] = useState(false);
     const [color, setColor] = useState('#000000');
-    const [strokeColor, setStrokeColor] = useState('#000000');
-    const [backgroundColor, setBackgroundColor] = useState('#ffffff');
     const [brushSize, setBrushSize] = useState(5);
     const [pan, setPan] = useState({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(1);
@@ -79,30 +73,21 @@ const Whiteboard = () => {
     const isPanningRef = useRef(false);
     const lastPanPointRef = useRef<Point | null>(null);
 
-    // -- Admin panel toggle
-    const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
-
-    //--permissions
-    const isOwner = currentUser && room?.owner?._id === currentUser._id;
-
-    const isApproved = currentUser &&
-        room?.members.some(
-            (m) => m.user._id === currentUser._id && m.status === "approved"
-        )
-
     // --- Color palette ---
     const strokeColors = [
         '#000000', '#e03131', '#2f9e44', '#1971c2', '#f08c00',
         '#ffffff'
     ];
 
+    /*
     const backgroundColors = [
         '#ffffff', '#ffc9c9', '#b2f2bb', '#a5d8ff', '#ffec99',
         'transparent'
     ];
+    */
 
-    const strokeWidths = [1, 2, 4];
-    const strokeStyles = ['solid', 'dashed', 'dotted'];
+    //const strokeWidths = [1, 2, 4];
+    //const strokeStyles = ['solid', 'dashed', 'dotted'];
 
     // Keep refs updated
     useEffect(() => {
@@ -542,21 +527,6 @@ const Whiteboard = () => {
     }, [roomCode])
 
 
-    const approveMember = (memberId: string) => {
-        console.log("APPROVE CLICKED", memberId);
-        socket.emit("room:approveMember", {
-            roomCode,
-            memberId
-        });
-    };
-
-    const rejectMember = (memberId: string) => {
-        console.log("REJECT CLICKED", memberId);
-        socket.emit("room:rejectMember", {
-            roomCode,
-            memberId
-        });
-    };
 
     const handleShare = async () => {
         try {

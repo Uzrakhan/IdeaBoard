@@ -3,7 +3,7 @@ import { updateRoomMemberStatus } from '../api';
 import type { Room } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
-import { Check, X, CircleUser,Users, UserMinus,  Clock, ShieldCheck } from 'lucide-react'
+import { Check, X,Users, UserMinus,  Clock, ShieldCheck } from 'lucide-react'
 
 interface RoomAdminPanelProps {
     room: Room;
