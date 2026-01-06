@@ -16,11 +16,15 @@ import ProtectedRoute from './components/ProtectedRoute';
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   const hideOnAuth = location.pathname === '/auth';
+
+  const hideForWhiteboard = location.pathname.startsWith('/room');
+  const shouldHideLayout = hideOnAuth || hideForWhiteboard;
+
   return (
     <div className='app-layout'>
-      {!hideOnAuth && <Header />}
+      {!shouldHideLayout && <Header />}
       <main className='main-content'>{children}</main>
-      {!hideOnAuth && <Footer />}
+      {!shouldHideLayout && <Footer />}
     </div>
   );
 };
@@ -56,10 +60,11 @@ const AppRoutes = () => {
   return (
     <Routes>
       <Route path='/auth' element={isAuthenticated ? <Navigate to="/" /> : <AuthPage />}/>
+
+      <Route path="/room/:roomCode" element={<ProtectedRoute><WhiteboardWrapper /></ProtectedRoute>} />
       <Route path='/' element={<ProtectedRoute><Layout><Home /></Layout></ProtectedRoute>}/>
       <Route path='/create-room' element={<ProtectedRoute><Layout><CreateRoomWrapper /></Layout></ProtectedRoute>}/>
       <Route path="/join/:roomCode" element={<ProtectedRoute><Layout><JoinRoomWrapper /></Layout></ProtectedRoute>} />
-      <Route path="/room/:roomCode" element={<ProtectedRoute><Layout><WhiteboardWrapper /></Layout></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   )

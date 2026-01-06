@@ -75,6 +75,7 @@ export const joinRoom = (roomCode: string) =>
     api.post(`/rooms/${roomCode}/join`)
         .catch(handleError);
 
+/*
 export const getRoom = async (roomCode: string) => {
   try {
     const res = await api.get(`/rooms/${roomCode}`);
@@ -95,6 +96,40 @@ export const getRoom = async (roomCode: string) => {
     handleError(error);
     throw error;
   }
+}
+*/
+
+export const getRoom = async (roomCode: string) => {
+  try {
+    const res = await api.get(`/rooms/${roomCode}`);
+
+    // 1. Determine the source of the room data (nested or direct)
+    // Use the full response body as a fallback if the nested 'room' key isn't present
+    const unwrappedRoom = res.data?.room || res.data;
+     
+    // 2. CRITICAL VALIDATION CHECK
+    // Check if the unwrapped room object is a non-null object with an '_id' property.
+    if (
+      unwrappedRoom && 
+      typeof unwrappedRoom === 'object' && 
+      unwrappedRoom._id // This checks that the object has a key we expect
+    ) {
+        // Logging the success case
+        const logMessage = res.data?.room ? 
+            "[getRoom API] Detected nested 'room' object and verified data integrity. Returning valid room." :
+            "[getRoom API] Detected direct room object and verified data integrity. Returning valid room.";
+        console.log(logMessage);
+
+        return unwrappedRoom;
+    } else {
+      // This block will now catch the silently returned empty object ({})
+      console.error("[getRoom API] CRITICAL ERROR: Room data is empty, incomplete, or malformed after unwrapping.");
+      throw new Error("Room data is missing or incomplete from the server response.");
+    }
+  } catch (error) {
+    handleError(error);
+    throw error;
+  }
 }
 
 export const updateRoomMemberStatus = (

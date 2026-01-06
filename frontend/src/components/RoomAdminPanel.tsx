@@ -3,7 +3,7 @@ import { updateRoomMemberStatus } from '../api';
 import type { Room } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
-import { Check, X, CircleUser } from 'lucide-react'
+import { Check, X, CircleUser,Users, UserMinus,  Clock, ShieldCheck } from 'lucide-react'
 
 interface RoomAdminPanelProps {
     room: Room;
@@ -38,40 +38,62 @@ const RoomAdminPanel: React.FC<RoomAdminPanelProps> = ({ room }) => {
     };
 
     return (
-        <div className='bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 p-6 rounded-xl shadow-md font-inter max-w-md w-full mx-auto'>
-            <h3 className='text-2xl font-bold mb-6 text-center text-gray-900 dark:text-gray-50'>
-                Room Administration
-            </h3>
-            <div className='space-y-8'>
-                {/* Pending Requests Section */}
+        <div className='bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl p-6 w-full max-w-xl mx-auto'>
+
+            {/** HEADER */}
+            <div className='flex items-center justify-between mb-6'>
                 <div>
-                    <h4 className='flex items-center text-xl font-semibold mb-4 text-indigo-600 dark:text-indigo-400'>
-                        Pending Requests ({pendingRequests.length})
-                    </h4>
-                    {pendingRequests.length > 0 ? (
-                        <ul className='space-y-4'>
-                            {pendingRequests.map((request) => (
+                    <h2 className='text-2xl font-bold text-gray-900 dark:text-white'>
+                        Room Admin Panel
+                    </h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Manage who can join and collaborate
+                    </p>
+                </div>
+
+                <span className='px-3 py-1 text-xs rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200'>
+                    {room.roomCode}
+                </span>
+            </div>
+
+            <div className='space-y-8'>
+
+                {/** pending requests */}
+                <section>
+                    <div className='flex items-center gap-2 mb-3'>
+                        <Clock className='w-5 h-5 text-yellow-500'/>
+                        <h3 className='text-lg font-semibold text-gray-800 dark:text-gray-100'>
+                            Pending Requests
+                            <span className="ml-2 text-sm text-yellow-600 dark:text-yellow-400">
+                                ({pendingRequests.length})
+                            </span>
+                        </h3>
+                    </div>
+
+                    {pendingRequests.length ? (
+                        <ul className='space-y-3'>
+                            {pendingRequests.map(req => (
                                 <li
-                                    key={request.user._id}
-                                    className='flex items-center justify-between bg-white dark:bg-gray-700 p-4 rounded-lg shadow-sm transition-all duration-200 hover:scale-[1.02]'
+                                    key={req.user._id}
+                                    className='flex items-center justify-between bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3 rounded-xl hover:shadow-md transition'
                                 >
-                                    <span
-                                        className='text-lg font-medium text-gray-700 dark:text-gray-200 flex-grow mr-4 truncate'
-                                    >
-                                        {request.user.username}
+                                    <span className="font-medium text-gray-800 dark:text-gray-100 truncate">
+                                        {req.user.username}
                                     </span>
-                                    <div className='flex space-x-2'>
+
+                                    <div className=' flex gap-2 '>
                                         <button
-                                            onClick={() => handleRequest(request.user._id, 'approved')}
-                                            className='bg-green-500 hover:bg-green-600 text-white font-semibold p-2 rounded-full transition-colors duration-200'
+                                            onClick={() => handleRequest(req.user._id, 'approved')}
+                                            className="p-2 rounded-full bg-green-500 hover:bg-green-600 text-white transition"
                                             title='Approve'
                                         >
                                             <Check className='w-4 h-4'/>
                                         </button>
+
                                         <button
-                                            onClick={() => handleRequest(request.user._id, 'rejected')}
-                                            className='bg-red-500 hover:bg-red-600 text-white font-semibold p-2 rounded-full transition-colors duration-200'
-                                            title='Reject'
+                                            onClick={() => handleRequest(req.user._id, 'rejected')}
+                                            className="p-2 rounded-full bg-red-500 hover:bg-red-600 text-white transition"
+                                            title="Reject"
                                         >
                                             <X className='w-4 h-4'/>
                                         </button>
@@ -80,51 +102,62 @@ const RoomAdminPanel: React.FC<RoomAdminPanelProps> = ({ room }) => {
                             ))}
                         </ul>
                     ) : (
-                        <p className='text-gray-500 dark:text-gray-400 italic text-center py-4'>
-                            No new join requests at the moment.
-                        </p>
+                        <div className="text-center py-5 text-gray-500 dark:text-gray-400 italic">
+                            No one is waiting to join
+                        </div>
                     )}
-                </div>
+                </section>
 
-                {/* Approved Members Section */}
-                <div className='pt-6 border-t border-gray-200 dark:border-gray-700'>
-                    <h4 className='flex items-center text-xl font-semibold mb-4 text-indigo-600 dark:text-indigo-400'>
-                        <CircleUser className="mr-2 w-5 h-5" />
-                        Approved Members ({approvedMembers.length})
-                    </h4>
-                    {approvedMembers.length > 0 ? (
+                {/** approved members */}
+                <section>
+                    <div className='flex items-center gap-2 mb-3'>
+                        <ShieldCheck className='w-5 h-5 text-green-500'/>
+                        <h3 className='text-lg font-semibold text-gray-800 dark:text-gray-100'>
+                            Approved Members
+                            <span className="ml-2 text-sm text-green-600 dark:text-green-400">
+                                ({approvedMembers.length})
+                            </span>
+                        </h3>
+                    </div>
+
+                    {approvedMembers.length ? (
                         <ul className='space-y-3'>
-                            {approvedMembers.map(member => (
+                            {approvedMembers.map(mem => (
                                 <li
-                                    key={member.user._id}
-                                    className='flex items-center justify-between bg-white dark:bg-gray-700 p-3 rounded-lg text-gray-700 dark:text-gray-200 shadow-sm'
+                                    key={mem.user._id}
+                                    className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3 rounded-xl"
                                 >
-                                    <span className="flex items-center">
-                                        {member.user.username}
-                                        {member.user._id === room.owner?._id && (
-                                            <span className="ml-2 text-xs font-bold px-2 py-0.5 bg-indigo-200 text-indigo-800 rounded-full">
-                                                Owner
+                                    <div className="flex items-center gap-2">
+                                        <Users className="w-4 h-4 text-gray-400"/>
+                                        <span className="font-medium text-gray-800 dark:text-gray-100">
+                                            {mem.user.username}
+                                        </span>
+
+                                        {mem.user._id === room.owner._id && (
+                                            <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200 font-semibold">
+                                                Owner 
                                             </span>
                                         )}
-                                    </span>
-                                    {member.user._id !== room.owner?._id && (
+                                    </div>
+
+                                    {mem.user._id !== room.owner._id && (
                                         <button
-                                            onClick={() => handleRequest(member.user._id, 'rejected')}
-                                            className="bg-red-500 hover:bg-red-600 text-white text-xs font-semibold p-2 rounded-full transition-colors duration-200"
-                                            title="Remove Member"
+                                            onClick={() => handleRequest(mem.user._id, 'rejected')}
+                                            className="flex items-center gap-1 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-semibold rounded-full transition"
                                         >
-                                            <X className="w-3 h-3" />
+                                            <UserMinus className="w-3 h-3" />
+                                            Remove
                                         </button>
                                     )}
                                 </li>
                             ))}
                         </ul>
                     ) : (
-                        <p className='text-gray-500 dark:text-gray-400 italic text-center py-4'>
-                            No members have joined yet.
-                        </p>
+                        <div className="text-center py-5 text-gray-500 dark:text-gray-400 italic">
+                            No approved members yet
+                        </div>
                     )}
-                </div>
+                </section>
             </div>
         </div>
     );
