@@ -25,17 +25,19 @@ type Point = { x: number; y: number };
 type DrawingLine = {
     sentTimestamp: any;
     id: string;
-    type: 'pen' | 'eraser' | 'rectangle' | 'circle';
+    type: 'pen' | 'eraser' | 'rectangle' | 'circle' | 'text';
     points?: Point[];
     startPoint?: Point;
     endPoint?: Point;
+    text?: string;
+    fontSize?: number;
     color: string;
     width: number;
 };
 
 
 
-type ToolType = 'select' | 'hand' | 'pen' | 'eraser' | 'rectangle' | 'circle';
+type ToolType = 'select' | 'hand' | 'pen' | 'eraser' | 'rectangle' | 'circle' | 'text';
 
 
 const Whiteboard = () => {
@@ -62,6 +64,10 @@ const Whiteboard = () => {
     const [zoom, setZoom] = useState(1);
     const [activeTool, setActiveTool] = useState<ToolType>('pen');
     const [openPanel, setOpenPanel] = useState<string | null>(null);
+    const [activeTextPos, setActiveTextPos] = useState<Point | null>(null);
+    const [textValue, setTextValue] = useState("");
+    const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
+    const [eraserSize, setEraserSize] = useState(10);
 
     // --- Refs ---
     const colorRef = useRef(color);
@@ -72,6 +78,7 @@ const Whiteboard = () => {
     const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
     const isPanningRef = useRef(false);
     const lastPanPointRef = useRef<Point | null>(null);
+    const dragOffsetRef = useRef<Point | null>(null);
 
     // --- Color palette ---
     const strokeColors = [
@@ -135,6 +142,28 @@ const Whiteboard = () => {
                         ctx.strokeRect(line.startPoint.x, line.startPoint.y, w, h);
                     }
                     break;
+                case 'text': 
+                    if (line.startPoint && line.text) {
+                        ctx.fillStyle = line.color;
+                        ctx.font = `${line.fontSize || 18}px Inter`;
+                        ctx.fillText(line.text, line.startPoint.x, line.startPoint.y);
+
+                        //DRAW BLLUE HIGHLIGHT IF SELECTED
+                        if (line.id === selectedTextId) {
+                            const size = line.fontSize || 18;
+                            const { width, height } = measureText(line.text, size);
+
+                            const x = line.startPoint.x;
+                            const y = line.startPoint.y - size;
+
+                            ctx.strokeStyle = "#3b82f6";
+                            ctx.lineWidth = 1 / zoom;
+                            ctx.setLineDash([4 / zoom, 2 / zoom]);
+                            ctx.strokeRect(x, y, width, height);
+                            ctx.setLineDash([]);
+                        }
+                    }
+                    break;
                 case 'circle':
                     if (line.startPoint && line.endPoint) {
                         const dx = line.endPoint.x - line.startPoint.x;
@@ -176,6 +205,15 @@ const Whiteboard = () => {
             toast.warn('You are not approved to draw.');
             return;
         }
+        console.log("pointer down — tool =", activeTool);
+
+        if (activeTool === "text") {
+            const point = getCanvasCoordinates(e);
+            console.log("TEXT CLICK AT:", point);
+            setActiveTextPos(point);
+            setTextValue("");
+            return;
+        }
 
         if (activeTool === 'hand') {
             isPanningRef.current = true;
@@ -183,7 +221,41 @@ const Whiteboard = () => {
             return;
         }
 
-        if (activeTool === 'select') return;
+        if (activeTool === 'select') {
+            const pt = getCanvasCoordinates(e);
+
+            // find topmost text item under cursor (loop backwards)
+            for (let i = linesRef.current.length - 1; i >= 0; i--) {
+                const item = linesRef.current[i];
+                if (item.type !== "text" || !item.startPoint || !item.text) continue;
+
+                const { width, height } = measureText(item.text, item.fontSize || 18);
+
+                const x = item.startPoint.x;
+                const y = item.startPoint.y - (item.fontSize || 18);
+
+                if (
+                    pt.x >= x &&
+                    pt.x <= x + width &&
+                    pt.y >= y &&
+                    pt.y <= y + height
+                ) {
+                    setSelectedTextId(item.id);
+
+                    dragOffsetRef.current = {
+                        x: pt.x - x,
+                        y: pt.y - y
+                    };
+                    redrawCanvas()
+                    return;
+                }
+            }
+
+            // clicked empty area => clear selection
+            setSelectedTextId(null);
+            redrawCanvas()
+            return;
+        }
 
         setIsDrawing(true);
 
@@ -195,7 +267,9 @@ const Whiteboard = () => {
                 type: activeTool,
                 points: [point],
                 color: activeTool === 'eraser' ? '#FFFFFF' : colorRef.current,
-                width: brushSizeRef.current,
+                width: activeTool === 'eraser'
+                    ? eraserSize
+                    : brushSizeRef.current,
                 sentTimestamp: Date.now()
             }
             linesRef.current.push(newLine);
@@ -208,6 +282,26 @@ const Whiteboard = () => {
     }, [activeTool, getCanvasCoordinates, room, canDraw]);
 
     const handlePointerMove = useCallback((e: PointerEvent) => {
+        if (activeTool === 'text' && activeTextPos) return;
+
+        if (activeTool === "select" && selectedTextId && dragOffsetRef.current) {
+            const pt = getCanvasCoordinates(e);
+
+            const item = linesRef.current.find(l => l.id === selectedTextId);
+            if (item && item.startPoint) {
+                item.startPoint = {
+                    x: pt.x - dragOffsetRef.current.x,
+                    y: pt.y - dragOffsetRef.current.y
+                };
+
+                redrawCanvas();
+
+                if (room) socket.emit("draw", item, room.roomCode);
+            }
+
+            return;
+        }
+
 
         if (activeTool === 'hand' && isPanningRef.current) {
             const dx = e.clientX - lastPanPointRef.current!.x;
@@ -232,6 +326,7 @@ const Whiteboard = () => {
         }
 
         if (!isDrawing) return;
+
         const ctx = ctxRef.current;
         const lastPoint = lastPointRef.current;
         if (!ctx || !lastPoint) return;
@@ -248,7 +343,9 @@ const Whiteboard = () => {
             ctx.translate(pan.x, pan.y);
             ctx.scale(zoom, zoom);
             ctx.beginPath();
-            ctx.lineWidth = brushSizeRef.current;
+            ctx.lineWidth = activeTool === 'eraser'
+                ? eraserSize
+                : brushSizeRef.current;
             ctx.strokeStyle = activeTool === 'eraser' ? '#FFFFFF' : colorRef.current;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
@@ -292,17 +389,27 @@ const Whiteboard = () => {
         }
 
         lastPointRef.current = point;
-    }, [isDrawing, activeTool, getCanvasCoordinates, redrawCanvas, pan.x, pan.y, zoom, room]);
+    }, [isDrawing, activeTool, getCanvasCoordinates, redrawCanvas, pan.x, pan.y, zoom, room, selectedTextId]);
 
     const handlePointerUp = useCallback(() => {
+        if (activeTool === 'text') return;
+        
+        //stop panning
         if (activeTool === 'hand') {
             isPanningRef.current = false;
+            return;
+        }
+
+        //stop dragging text
+        if (activeTool === "select") {
+            dragOffsetRef.current = null;
             return;
         }
 
         if (!isDrawing) return;
         setIsDrawing(false);
 
+    
         if (activeTool === 'rectangle' || activeTool === 'circle') {
             if (!startPointRef.current || !lastPointRef.current) return;
 
@@ -409,6 +516,46 @@ const Whiteboard = () => {
         }
     };
 
+
+    const handleTextSubmit = () => {
+        if (!textValue.trim() || !activeTextPos) {
+            setActiveTextPos(null);
+            return;
+        }
+
+        const newText: DrawingLine = {
+            id: crypto.randomUUID(),
+            type: 'text',
+            text: textValue,
+            startPoint: activeTextPos,
+            color: colorRef.current,
+            width: brushSizeRef.current,
+            fontSize: 18,
+            sentTimestamp: Date.now()
+        };
+
+        linesRef.current.push(newText);
+
+        if (room)  socket.emit('draw', newText, room.roomCode);
+
+            setActiveTextPos(null);
+            setTextValue("");
+            redrawCanvas();
+    }
+
+    const measureText = (text: string, fontSize: number) => {
+        const ctx = ctxRef.current;
+
+        if (!ctx) return { width: 0, height: fontSize }
+
+        ctx.font = `${fontSize}px Inter`;
+
+        return {
+            width: ctx.measureText(text).width,
+            height: fontSize
+        }
+    }
+
     const ToolButton = ({ tool, icon: Icon, label }: { tool: ToolType; icon: React.ElementType; label: string }) => (
         <button
             onClick={() => handleToolClick(tool)}
@@ -422,6 +569,9 @@ const Whiteboard = () => {
             <Icon className="w-5 h-5" />
         </button>
     );
+
+    console.log("Tool:", activeTool);
+
 
 
     // ⬇️ When someone joins and is not approved → they create a join request
@@ -524,7 +674,12 @@ const Whiteboard = () => {
             }
         };
         fetchRoom()
-    }, [roomCode])
+    }, [roomCode]);
+
+    useEffect(() => {
+        console.log("INPUT MOUNT?", activeTextPos);
+    }, [activeTextPos]);
+
 
 
 
@@ -557,6 +712,7 @@ const Whiteboard = () => {
                     <ToolButton tool="circle" icon={Circle} label="Circle" />
                     <ToolButton tool="pen" icon={Pen} label="Draw" />
                     <ToolButton tool="eraser" icon={Eraser} label="Eraser" />
+                    <ToolButton tool='text' icon={MousePointer2} label='Text'/>
 
                     <div className="h-6 w-px bg-gray-300" />
 
@@ -569,33 +725,58 @@ const Whiteboard = () => {
                 </div>
 
                 {/* 🎨 TOOL OPTIONS PANEL */}
-                {['pen', 'rectangle', 'circle'].includes(activeTool) && openPanel && (
+                {['pen', 'rectangle', 'circle', 'eraser'].includes(activeTool) && openPanel && (
                 <div className="absolute top-14 left-4 bg-white shadow-xl border rounded-lg p-4 z-50">
 
-                    <div className="mb-3">
-                    <p className="text-sm font-semibold mb-1">Stroke Color</p>
+                    {activeTool === 'eraser' ? (
+                        <>
+                            <p className='text-sm font-semibold mb-1'>
+                                Eraser Size
+                            </p>
 
-                    <div className="flex gap-2">
-                        {strokeColors.map(c => (
-                        <button
-                            key={c}
-                            onClick={() => setColor(c)}
-                            className={`w-6 h-6 rounded-full border shadow 
-                            ${color === c ? "ring-2 ring-indigo-500" : ""}`}
-                            style={{ backgroundColor: c }}
-                        />
-                        ))}
+                            <div className='flex gap-2'>
+                                {[6, 10, 16, 24, 32].map(size => (
+                                    <button
+                                        key={size}
+                                        onClick={() => setEraserSize(size)}
+                                        className={`px-3 py-1 rounded border
+                                                ${eraserSize === size ? "bg-red-100 border-red-500": "bg-gray-50"}
+                                            `}
+                                    >
+                                        {size}px
+                                    </button>
+                                ))}
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <div className="mb-3">
+                                <p className="text-sm font-semibold mb-1">Stroke Color</p>
 
-                        {/* Native color picker */}
-                        <input
-                        type="color"
-                        value={color}
-                        onChange={(e) => setColor(e.target.value)}
-                        className="ml-2 cursor-pointer"
-                        />
-                    </div>
-                    </div>
+                                <div className="flex gap-2">
+                                    {strokeColors.map(c => (
+                                    <button
+                                        key={c}
+                                        onClick={() => setColor(c)}
+                                        className={`w-6 h-6 rounded-full border shadow 
+                                        ${color === c ? "ring-2 ring-indigo-500" : ""}`}
+                                        style={{ backgroundColor: c }}
+                                    />
+                                    ))}
 
+                                    {/* Native color picker */}
+                                    <input
+                                    type="color"
+                                    value={color}
+                                    onChange={(e) => setColor(e.target.value)}
+                                    className="ml-2 cursor-pointer"
+                                    />
+                                </div>
+                            </div>
+                        </>
+                    )}
+
+                    
                     <div>
                     <p className="text-sm font-semibold mb-1">Stroke Width</p>
 
@@ -659,13 +840,34 @@ const Whiteboard = () => {
                                     ? "grab"
                                     : activeTool === "select"
                                     ? "default"
+                                    : activeTool === "text"
+                                    ? "text"
                                     : "crosshair"
                         }}
                     />
 
+                    {/** floating text input */}
+                    {activeTextPos && (
+                        <input
+                            autoFocus
+                            value={textValue}
+                            onChange={(e) => setTextValue(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && handleTextSubmit()}
+                            onPointerDown={(e) => e.stopPropagation()}
+                            className="absolute z-[9999] bg-white border border-gray-400 px-1 text-black outline-none"
+                            style={{
+                            left: activeTextPos.x * zoom + pan.x,
+                            top: activeTextPos.y * zoom + pan.y,
+                            transform: "translate(-50%, -50%)",
+                            fontSize: `${18 * zoom}px`
+                            }}
+                        />
+                    )}
+
+
                     {/* Grid overlay */}
                     <div
-                        className="absolute inset-0 pointer-events-none opacity-10"
+                        className="absolute inset-0 pointer-events-none opacity-10 z-[-1]"
                         style={{
                             backgroundImage: `
                                 linear-gradient(to right, #d1d5db 1px, transparent 1px),

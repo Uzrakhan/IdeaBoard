@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { socket } from '../socket';
 import { useNavigate, useParams } from 'react-router-dom';
 import { joinRoom } from '../api';
 import type { Room } from '../types';
@@ -68,6 +69,31 @@ const JoinRoom: React.FC<JoinRoomProps> = ({ room }) => {
       navigate(`/room/${room.roomCode}`);
     }
   }, [isApprovedMember, isOwner, navigate, room.roomCode]);
+
+  useEffect(() => {
+
+    socket.on("yourRoomStatusUpdated", (data) => {
+
+      if (data.status === "approved") {
+        // Optional toast
+        // toast.success("You are approved!");
+
+        navigate(`/room/${data.roomCode}`);
+      }
+
+      if (data.status === "rejected") {
+        // Optional toast
+        // toast.error("Your request was rejected");
+      }
+
+    });
+
+    return () => {
+      socket.off("yourRoomStatusUpdated");
+    };
+
+  }, [navigate]);
+
 
   const memberCount = room.members.filter(
     (m) => m.status === 'approved' && m.user._id !== room.owner._id
