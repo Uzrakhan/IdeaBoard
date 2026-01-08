@@ -63,12 +63,18 @@ const JoinRoom: React.FC<JoinRoomProps> = ({ room }) => {
     }
   };
 
+
   useEffect(() => {
-    if (isApprovedMember && !isOwner) {
-      console.log('User is now an approved member, redirecting to whiteboard.');
-      navigate(`/room/${room.roomCode}`);
-    }
-  }, [isApprovedMember, isOwner, navigate, room.roomCode]);
+  if (!socket.connected) socket.connect();
+
+  if (userId) {
+    socket.emit("joinRoomChannel", {
+      roomCode,
+      userId
+    });
+  }
+}, [roomCode, userId]);
+
 
   useEffect(() => {
 
