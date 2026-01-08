@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from 'vite' // 1. IMPORT loadEnv
 import react from '@vitejs/plugin-react'
+import path from 'path'
 
 // You must change the export to an async function to manually load environment variables
 export default defineConfig(({ mode }) => {
@@ -21,6 +22,11 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
+    resolve: {
+    alias: {
+        "@": path.resolve(__dirname, "./src"),
+      },
+    },
     base: '/',
     build: {
       outDir: 'dist',

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
 import {
     Pen,
     Eraser,
@@ -874,22 +874,25 @@ const Whiteboard = () => {
                         <Input
                             autoFocus
                             value={textValue}
-                            onChange={(e) => setTextValue(e.target.value)}
-                            onKeyDown={(e) => {
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                                setTextValue(e.target.value)
+                            }
+                            onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
                                 if (e.key === "Enter") handleTextSubmit();
                                 if (e.key === "Escape") setActiveTextPos(null);
                             }}
-                            onPointerDown={(e) => e.stopPropagation()}
-                            placeholder='Type...'
+                            onPointerDown={(e: React.PointerEvent<HTMLInputElement>) =>
+                                e.stopPropagation()
+                            }
+                            placeholder="Type..."
                             className="
                                 absolute z-[9999]
                                 w-auto min-w-[120px]
                                 px-1 py-0
-                                border border-gray-400
                                 bg-white
                                 shadow-sm
                                 focus-visible:ring-1 focus-visible:ring-indigo-500
-                                "
+                            "
                             style={{
                                 left: activeTextPos.x * zoom + pan.x,
                                 top: activeTextPos.y * zoom + pan.y,
