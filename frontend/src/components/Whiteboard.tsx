@@ -12,6 +12,7 @@ import {
     ZoomOut,
     Maximize2,
     MousePointer2,
+    Type,
 } from 'lucide-react';
 import { socket } from '../socket';
 import { getRoom } from '../api';
@@ -712,7 +713,7 @@ const Whiteboard = () => {
                     <ToolButton tool="circle" icon={Circle} label="Circle" />
                     <ToolButton tool="pen" icon={Pen} label="Draw" />
                     <ToolButton tool="eraser" icon={Eraser} label="Eraser" />
-                    <ToolButton tool='text' icon={MousePointer2} label='Text'/>
+                    <ToolButton tool='text' icon={Type} label='Text'/>
 
                     <div className="h-6 w-px bg-gray-300" />
 
