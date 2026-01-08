@@ -1126,6 +1126,9 @@ async function saveRoomData(roomCode:string, data: RoomData) {
   await db.write(); //write changes back to db.json
 }
 
+
+
+
 // Socket.io Handlers (now comes after io is defined)
 io.on('connection', (socket: Socket) => { // 'socket' here will infer type correctly from 'socket.io'
   console.log('New client connected:', socket.id);
@@ -1141,6 +1144,7 @@ io.on('connection', (socket: Socket) => { // 'socket' here will infer type corre
     socket.join(roomCode); //add this socket to the Socket.IO room group
     connectedUsers.set(userId, socket.id); //track user to socket mapping
     console.log(`Socket ${socket.id} (User ${userId}) joined room ${roomCode}`);
+    
 
     //IMPORTANT: Send initial-state for THIS specific room only
     try{
