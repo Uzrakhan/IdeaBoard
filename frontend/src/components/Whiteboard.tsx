@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
 import {
     Pen,
     Eraser,
@@ -69,6 +71,7 @@ const Whiteboard = () => {
     const [textValue, setTextValue] = useState("");
     const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
     const [eraserSize, setEraserSize] = useState(10);
+    const [textFontSize, setTextFontSize] = useState(18);
 
     // --- Refs ---
     const colorRef = useRef(color);
@@ -242,6 +245,7 @@ const Whiteboard = () => {
                     pt.y <= y + height
                 ) {
                     setSelectedTextId(item.id);
+                    setTextFontSize(item.fontSize || 18);
 
                     dragOffsetRef.current = {
                         x: pt.x - x,
@@ -509,7 +513,7 @@ const Whiteboard = () => {
             setOpenPanel(null);
         } else {
             setActiveTool(tool);
-            if (['pen', 'rectangle', 'circle'].includes(tool)) {
+            if (['pen', 'rectangle', 'circle', 'text'].includes(tool)) {
                 setOpenPanel(tool);
             } else {
                 setOpenPanel(null);
@@ -531,7 +535,7 @@ const Whiteboard = () => {
             startPoint: activeTextPos,
             color: colorRef.current,
             width: brushSizeRef.current,
-            fontSize: 18,
+            fontSize: textFontSize,
             sentTimestamp: Date.now()
         };
 
@@ -557,18 +561,15 @@ const Whiteboard = () => {
         }
     }
 
-    const ToolButton = ({ tool, icon: Icon, label }: { tool: ToolType; icon: React.ElementType; label: string }) => (
-        <button
+    const ToolButton = ({ tool, icon: Icon }: { tool: ToolType; icon: React.ElementType; label: string }) => (
+        <Button
+            variant={activeTool === tool ? "secondary": "ghost"}
+            size="icon"
             onClick={() => handleToolClick(tool)}
-            className={`p-2.5 rounded-lg transition-all ${
-                activeTool === tool
-                    ? 'bg-indigo-100 text-indigo-600'
-                    : 'text-gray-700 hover:bg-gray-100'
-            }`}
-            title={label}
+            className={activeTool === tool ? "ring-2 ring-indigo-500" : ""}
         >
-            <Icon className="w-5 h-5" />
-        </button>
+            <Icon className="h-5 w-5" />
+        </Button>
     );
 
     console.log("Tool:", activeTool);
@@ -726,7 +727,7 @@ const Whiteboard = () => {
                 </div>
 
                 {/* 🎨 TOOL OPTIONS PANEL */}
-                {['pen', 'rectangle', 'circle', 'eraser'].includes(activeTool) && openPanel && (
+                {['pen', 'rectangle', 'circle', 'eraser', 'text'].includes(activeTool) && openPanel && (
                 <div className="absolute top-14 left-4 bg-white shadow-xl border rounded-lg p-4 z-50">
 
                     {activeTool === 'eraser' ? (
@@ -779,22 +780,43 @@ const Whiteboard = () => {
 
                     
                     <div>
-                    <p className="text-sm font-semibold mb-1">Stroke Width</p>
+                        <p className="text-sm font-semibold mb-1">Stroke Width</p>
 
-                    <div className="flex gap-2">
-                        {[2, 4, 6, 10, 14].map(w => (
-                        <button
-                            key={w}
-                            onClick={() => setBrushSize(w)}
-                            className={`px-3 py-1 rounded border 
-                            ${brushSize === w ? "bg-indigo-100 border-indigo-500" : "bg-gray-50"}`}
-                        >
-                            {w}px
-                        </button>
-                        ))}
-                    </div>
+                        <div className="flex gap-2">
+                            {[2, 4, 6, 10, 14].map(w => (
+                            <button
+                                key={w}
+                                onClick={() => setBrushSize(w)}
+                                className={`px-3 py-1 rounded border 
+                                ${brushSize === w ? "bg-indigo-100 border-indigo-500" : "bg-gray-50"}`}
+                            >
+                                {w}px
+                            </button>
+                            ))}
+                        </div>
                     </div>
 
+                    {activeTool === 'text' && (
+                        <div>
+                            <p className="text-sm font-semibold mb-2">Font Size</p>
+
+                            <div className='flex gap-2 flex-wrap'>
+                                {[12, 16, 18, 24, 32, 48].map(size => (
+                                    <button
+                                        key={size}
+                                        onClick={() => setTextFontSize(size)}
+                                        className={`px-3 py-1 rounded border
+                                            ${textFontSize === size
+                                            ? "bg-indigo-100 border-indigo-500"
+                                            : "bg-gray-50 hover:bg-gray-100"
+                                            }`}
+                                    >
+                                        {size}px
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
                 )}
 
@@ -849,18 +871,31 @@ const Whiteboard = () => {
 
                     {/** floating text input */}
                     {activeTextPos && (
-                        <input
+                        <Input
                             autoFocus
                             value={textValue}
                             onChange={(e) => setTextValue(e.target.value)}
-                            onKeyDown={(e) => e.key === "Enter" && handleTextSubmit()}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") handleTextSubmit();
+                                if (e.key === "Escape") setActiveTextPos(null);
+                            }}
                             onPointerDown={(e) => e.stopPropagation()}
-                            className="absolute z-[9999] bg-white border border-gray-400 px-1 text-black outline-none"
+                            placeholder='Type...'
+                            className="
+                                absolute z-[9999]
+                                w-auto min-w-[120px]
+                                px-1 py-0
+                                border border-gray-400
+                                bg-white
+                                shadow-sm
+                                focus-visible:ring-1 focus-visible:ring-indigo-500
+                                "
                             style={{
-                            left: activeTextPos.x * zoom + pan.x,
-                            top: activeTextPos.y * zoom + pan.y,
-                            transform: "translate(-50%, -50%)",
-                            fontSize: `${18 * zoom}px`
+                                left: activeTextPos.x * zoom + pan.x,
+                                top: activeTextPos.y * zoom + pan.y,
+                                transform: "translate(-50%, -50%)",
+                                fontSize: `${textFontSize * zoom}px`,
+                                height: `${textFontSize * zoom + 8}px`,
                             }}
                         />
                     )}
