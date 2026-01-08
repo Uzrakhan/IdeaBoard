@@ -1,6 +1,7 @@
 **IdeaBoard**
 
 A collaborative whiteboard application built with React, Node.js, and MongoDB.
+[![Backend CI](https://github.com/Uzrakhan/IdeaBoard/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/Uzrakhan/IdeaBoard/actions/workflows/backend-ci.yml)
 
 **Table of Contents**
 
