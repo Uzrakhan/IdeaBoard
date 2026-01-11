@@ -14,7 +14,18 @@ const AuthPage: React.FC = () => {
     const location = useLocation();
     const { login: authLogin } = useAuth();
 
-    const from = location.state?.from?.pathname || '/';
+    
+    const from = location.state?.from || "/";
+
+    if (location.state?.from === "demo") {
+        navigate("/create-room", { replace: true });
+        return;
+    }
+
+
+    useEffect(() => {
+        if (!location.state?.from) return;
+    }, [location.state]);
 
     useEffect(() => {
         setMessage('');
@@ -37,7 +48,7 @@ const AuthPage: React.FC = () => {
                 const response = await login(username, password);
                 if (response.data.user && response.data.token) {
                     authLogin(response.data.token, response.data.user);
-                    navigate(from, { replace: true });
+                    navigate(location.state?.from || "/", { replace: true });
                 } else {
                     setMessage('Login failed: User data not found.');
                 }

@@ -41,7 +41,7 @@ const Header: React.FC<HeaderProps> = ({ onLogout }) => {
           </NavLink>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-1">
+          <nav className="hidden md:flex items-center space-x-1 ml-auto">
             <NavLink 
               to="/" 
               className="px-4 py-2 text-slate-700 hover:text-violet-600 font-medium transition-colors rounded-lg hover:bg-violet-50"
@@ -64,32 +64,6 @@ const Header: React.FC<HeaderProps> = ({ onLogout }) => {
 
           {/* Auth Section */}
           <div className="flex items-center space-x-4">
-            {user ? (
-              <div className="hidden md:flex items-center space-x-4">
-                <div className="flex items-center space-x-3 px-4 py-2 bg-gradient-to-r from-violet-50 to-fuchsia-50 rounded-xl border border-violet-200/50">
-                  <div className="w-8 h-8 bg-gradient-to-br from-violet-400 to-fuchsia-400 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                    {username[0].toUpperCase()}
-                  </div>
-                  <span className="text-slate-700 font-medium">
-                    {username}
-                  </span>
-                </div>
-                <button 
-                  onClick={handleLogout}
-                  className="px-5 py-2.5 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-semibold rounded-lg hover:shadow-lg hover:shadow-violet-500/50 transition-all duration-300 hover:scale-105"
-                >
-                  Logout
-                </button>
-              </div>
-            ) : (
-              <Link 
-                to="/auth" 
-                className="hidden md:block px-5 py-2.5 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-semibold rounded-lg hover:shadow-lg hover:shadow-violet-500/50 transition-all duration-300 hover:scale-105"
-              >
-                Login
-              </Link>
-            )}
-
             {/* Mobile Menu Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}

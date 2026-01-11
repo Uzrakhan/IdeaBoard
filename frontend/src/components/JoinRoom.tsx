@@ -24,8 +24,16 @@ const JoinRoom: React.FC<JoinRoomProps> = ({ room }) => {
   const [error, setError] = useState('');
   const [showRequestSentMessage, setShowRequestSentMessage] = useState(false);
   const navigate = useNavigate();
-  const userId = localStorage.getItem('userId');
-  useAuth();
+  const { currentUser, isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/auth', {
+        state: { from: `/join/${room.roomCode}` },
+        replace: true,
+      });
+    }
+  }, [isAuthenticated, navigate, room.roomCode]);
 
   // Safety check
   if (!room || !room.owner || !room.members || !room.roomCode) {
@@ -42,6 +50,7 @@ const JoinRoom: React.FC<JoinRoomProps> = ({ room }) => {
     );
   }
 
+  const userId = currentUser?._id;
   const isOwner = room?.owner?._id === userId;
   const isApprovedMember = room?.members?.some(
     (m) => m?.user?._id === userId && m.status === 'approved'
@@ -67,13 +76,13 @@ const JoinRoom: React.FC<JoinRoomProps> = ({ room }) => {
   useEffect(() => {
   if (!socket.connected) socket.connect();
 
-  if (userId) {
+  if (roomCode && currentUser) {
     socket.emit("joinRoomChannel", {
       roomCode,
-      userId
+      userId: currentUser._id
     });
   }
-}, [roomCode, userId]);
+}, [roomCode, currentUser]);
 
 
   useEffect(() => {

@@ -24,8 +24,9 @@ interface AuthProviderProps {
 export const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(!!localStorage.getItem('token'));
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
   /*
   useEffect(() => {
@@ -47,26 +48,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
   */
- 
+
   useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
+    setIsAuthenticated(false);
+    setUser(null);
+    setLoading(false)
+  },[])
+  
+  /*
+  useEffect(() => {
+  const token = localStorage.getItem('token');
+  const storedUser = localStorage.getItem('user');
 
-    if (storedToken && storedUser) {
-      try {
-          const parsedUser = JSON.parse(storedUser);
-          setUser(parsedUser);
-          // No need to set isAuthenticated here, as it's already done in useState
-      } catch (e) {
-          console.error("Failed to parse user from localStorage", e);
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          setIsAuthenticated(false);
-          setUser(null);
-      }
+  if (token && storedUser) {
+    try {
+      setUser(JSON.parse(storedUser));
+      setIsAuthenticated(true);
+    } catch {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setIsAuthenticated(false);
+      setUser(null);
     }
-  }, []);
+  } else {
+    setIsAuthenticated(false);
+    setUser(null);
+  }
 
+  setLoading(false); // ✅ VERY IMPORTANT
+}, []);
+  */
   
   // ✅ The login function now accepts a single user object
   const login = async (token: string, userData: any): Promise<void> => {
@@ -89,7 +100,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     logout,
     currentUser: user,
-    loading: false
+    loading
   };
 
   return (

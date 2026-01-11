@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getRoom } from '../api';
 import JoinRoom from './JoinRoom';
 import type { Room } from '../types';
+import { useAuth } from '@/context/AuthContext';
 
 
 const JoinRoomWrapper: React.FC = () => {
@@ -11,15 +12,26 @@ const JoinRoomWrapper: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
-  const userId = localStorage.getItem('userId');
+  const { currentUser, isAuthenticated } = useAuth();
+
+  // 🔐 Redirect unauthenticated users
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/auth', {
+        state: { from: `/join/${roomCode}` },
+        replace: true,
+      });
+      return;
+    }
+  }, [isAuthenticated, navigate, roomCode]);
 
   useEffect(() => {
     const fetchRoom = async () => {
-      if (!roomCode) return;
+      if (!roomCode || !currentUser) return;
 
       if (currentRoom && currentRoom.roomCode === roomCode) {
         const isApproved = currentRoom.members?.some(
-          (m: any) => m?.user?._id?.toString() === userId && m.status === 'approved'
+          (m: any) => m?.user?._id?.toString() === currentUser._id && m.status === 'approved'
         );
         if (isApproved) {
           navigate(`/room/${roomCode}`);
@@ -33,7 +45,7 @@ const JoinRoomWrapper: React.FC = () => {
         if(!responseData) throw new Error('Room data not found in response');
         setCurrentRoom(responseData);
         const isApproved = responseData.members?.some(
-          (m: any) => m?.user?._id?.toString() === userId && m.status === 'approved'
+          (m: any) => m?.user?._id?.toString() === currentUser._id && m.status === 'approved'
         );
         if (isApproved) navigate(`/room/${roomCode}`);
       } catch (err: any) {        
@@ -45,7 +57,7 @@ const JoinRoomWrapper: React.FC = () => {
       }
     };
     fetchRoom();
-  }, [roomCode, userId, navigate]);
+  }, [roomCode, currentUser, navigate]);
 
   if (isLoading) return <div>Loading room...</div>;
   if (error) return <div className="error">{error}</div>;

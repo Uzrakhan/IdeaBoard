@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from './ui/button';
+import { useNavigate } from 'react-router-dom';
 import { Input } from './ui/input';
 import {
     Pen,
@@ -24,6 +25,9 @@ import { toast } from 'react-toastify';
 import RoomAdminPanel from './RoomAdminPanel';
 import type { Room } from '../types/index';
 
+
+type WhiteboardMode = "demo" | "room";
+
 type Point = { x: number; y: number };
 type DrawingLine = {
     sentTimestamp: any;
@@ -38,17 +42,25 @@ type DrawingLine = {
     width: number;
 };
 
+interface WhiteboardProps {
+    mode: WhiteboardMode;
+    roomCode?: string;
+} 
 
 
 type ToolType = 'select' | 'hand' | 'pen' | 'eraser' | 'rectangle' | 'circle' | 'text';
 
 
-const Whiteboard = () => {
+const Whiteboard = ({ mode, roomCode }: WhiteboardProps) => {
     const lastEmitRef = useRef(0);
     const EMIT_INTERVAL = 30;
- 
+    
+    const navigate = useNavigate()
 
-    const { roomCode } = useParams<{ roomCode: string }>();
+    //const { roomCode } = useParams<{ roomCode: string }>();
+    const params = useParams<{ roomCode: string }>();
+    const effectiveRoomCode = roomCode ?? params.roomCode;
+
     const { currentUser } = useAuth();
 
     const [room,setRoom] = useState<Room | null>(null)
@@ -72,6 +84,7 @@ const Whiteboard = () => {
     const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
     const [eraserSize, setEraserSize] = useState(10);
     const [textFontSize, setTextFontSize] = useState(18);
+    //const [showAuthModal, setShowAuthModal] = useState(false);
 
     // --- Refs ---
     const colorRef = useRef(color);
@@ -196,13 +209,16 @@ const Whiteboard = () => {
     }, [pan.x, pan.y, zoom]);
 
     // ---------- EVENTS ----------
+
+    const isDemo = mode === "demo";
     /// CAN USER DRAW
-    const canDraw = room && currentUser && 
-        (room.owner._id === currentUser._id ||
-            room.members.some(
-                (m) => m.user._id === currentUser._id && m.status === "approved"
-            )
-        )
+    const canDraw = isDemo ||
+        (room && currentUser && 
+            (room.owner._id === currentUser._id ||
+                room.members.some(
+                    (m) => m.user._id === currentUser._id && m.status === "approved"
+                )));
+
 
     const handlePointerDown = useCallback((e: PointerEvent) => {
         if (!canDraw && activeTool !== 'hand' && activeTool !== 'select') {
@@ -278,7 +294,7 @@ const Whiteboard = () => {
                 sentTimestamp: Date.now()
             }
             linesRef.current.push(newLine);
-            if (room) socket.emit('draw', newLine, room.roomCode);
+            if (room && effectiveRoomCode) socket.emit('draw', newLine, effectiveRoomCode);
         } else {
             startPointRef.current = point;
         }
@@ -315,9 +331,9 @@ const Whiteboard = () => {
                 const newPan = { x: p.x + dx, y: p.y + dy };
 
                 const now = Date.now();
-                if (roomCode && now - lastEmitRef.current > EMIT_INTERVAL) {
+                if (effectiveRoomCode && now - lastEmitRef.current > EMIT_INTERVAL) {
                     socket.emit("whiteboard:pan", {
-                        roomCode,
+                        roomCode: effectiveRoomCode,
                         pan: newPan
                     });
                     lastEmitRef.current = now;
@@ -359,10 +375,10 @@ const Whiteboard = () => {
             ctx.stroke();
             ctx.restore();
 
-            if (room) socket.emit(
+            if (!isDemo && room && effectiveRoomCode) socket.emit(
                 'draw', 
                 { ...lastLine, sentTimeStamp: Date.now() },
-                room.roomCode
+                effectiveRoomCode
             );
         } else if (activeTool === 'rectangle' || activeTool === 'circle') {
             redrawCanvas();
@@ -429,7 +445,10 @@ const Whiteboard = () => {
             }
             linesRef.current.push(newShape);
 
-            if (room) socket.emit('draw', newShape, room.roomCode);
+            if (!isDemo && room && effectiveRoomCode) {
+                socket.emit('draw', newShape, effectiveRoomCode);
+            }
+
         }
 
         startPointRef.current = null;
@@ -446,9 +465,9 @@ const Whiteboard = () => {
         setZoom(newZoom);
 
         const now = Date.now();
-        if (roomCode && now - lastEmitRef.current > EMIT_INTERVAL) {
+        if (effectiveRoomCode && now - lastEmitRef.current > EMIT_INTERVAL) {
             socket.emit("whiteboard:zoom", {
-                roomCode,
+                roomCode: effectiveRoomCode,
                 zoom: newZoom
             });
             lastEmitRef.current = now;
@@ -499,9 +518,19 @@ const Whiteboard = () => {
 
     // ---------- CLEAR ----------
     const clearBoard = () => {
-        linesRef.current = [];
-        redrawCanvas();
+        if (!effectiveRoomCode) return;
+
+        // demo mode → local only
+        if (mode === "demo") {
+            linesRef.current = [];
+            redrawCanvas();
+            return;
+        }
+
+        // room mode → broadcast
+        socket.emit("clear", effectiveRoomCode);
     };
+
 
     const resetView = () => {
         setPan({ x: 0, y: 0 });
@@ -541,7 +570,9 @@ const Whiteboard = () => {
 
         linesRef.current.push(newText);
 
-        if (room)  socket.emit('draw', newText, room.roomCode);
+        if (!isDemo && room && effectiveRoomCode) {
+            socket.emit('draw', newText, effectiveRoomCode);
+        }
 
             setActiveTextPos(null);
             setTextValue("");
@@ -574,6 +605,34 @@ const Whiteboard = () => {
 
     console.log("Tool:", activeTool);
 
+    useEffect(() => {
+  if (!effectiveRoomCode || !currentUser) return;
+
+  if (!socket.connected) {
+    socket.connect();
+  }
+
+  socket.emit("joinRoomChannel", {
+    roomCode: effectiveRoomCode,
+    userId: currentUser._id
+  });
+
+  console.log("🟢 Joined socket room:", effectiveRoomCode);
+
+}, [effectiveRoomCode, currentUser]);
+
+    useEffect(() => {
+  const handleJoinRequest = (data: any) => {
+    toast.info(`${data.requester} requested to join`);
+    setPendingRequests(prev => prev + 1);
+  };
+
+  socket.on("room:joinRequest", handleJoinRequest);
+
+  return () => {
+    socket.off("room:joinRequest", handleJoinRequest);
+  };
+}, []);
 
 
     // ⬇️ When someone joins and is not approved → they create a join request
@@ -583,9 +642,9 @@ const Whiteboard = () => {
         socket.on("connect", () => {
             console.log("Socket connected: ", socket.id);
 
-            if (roomCode && currentUser) {
+            if (effectiveRoomCode && currentUser) {
                 socket.emit("joinRoomChannel", {
-                    roomCode,
+                    roomCode: effectiveRoomCode,
                     userId: currentUser._id
                 })
             }
@@ -652,17 +711,17 @@ const Whiteboard = () => {
             socket.off("yourRoomStatusUpdated");
             socket.off("whiteboard:stateUpdate");
         }
-    }, [roomCode, currentUser, redrawCanvas]);
+    }, [effectiveRoomCode, currentUser, redrawCanvas]);
 
 
 
     // FETCH ROOM DETAILS
     useEffect(() => {
-        if (!roomCode) return;
+        if (!effectiveRoomCode) return;
 
         const fetchRoom = async () => {
             try {
-                const data = await getRoom(roomCode);
+                const data = await getRoom(effectiveRoomCode);
                 setRoom(data);
                 
                 const pending = data.members.filter(
@@ -676,18 +735,36 @@ const Whiteboard = () => {
             }
         };
         fetchRoom()
-    }, [roomCode]);
+    }, [effectiveRoomCode]);
 
     useEffect(() => {
         console.log("INPUT MOUNT?", activeTextPos);
     }, [activeTextPos]);
 
+    const saveDemoState = () => {
+        const payload = {
+            lines: linesRef.current,
+            pan,
+            zoom,
+        };
 
+        sessionStorage.setItem("demo-whiteboard", JSON.stringify(payload));
+    };
 
 
     const handleShare = async () => {
+        if (mode === "demo") {
+
+            saveDemoState();
+
+            navigate("/auth", {
+                state: { from: "demo" }
+            })
+            return;
+        }
+        
         try {
-            const link = `${window.location.origin}/join/${roomCode}`;
+            const link = `${window.location.origin}/join/${effectiveRoomCode}`;
             await navigator.clipboard.writeText(link);
             toast.success("Room link copied to clipboard!");
         } catch (err) {
@@ -695,6 +772,9 @@ const Whiteboard = () => {
             toast.error("Failed to copy link");
         }
     }
+
+    
+
 
     // ---------- JSX ----------
     return (

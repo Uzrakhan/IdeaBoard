@@ -6,6 +6,17 @@ const Home = () => {
 
   const navigate = useNavigate();
 
+  const handleTryDemo = () => {
+    navigate('/demo')
+  }
+
+  const handleSignIn = () => {
+    navigate('/auth', {
+      state: { from: '/create-room' }
+    })
+  }
+
+  
   const handleCreateRoom = () => {
     navigate('/create-room');
   };
@@ -108,14 +119,11 @@ const Home = () => {
               variants={fadeInUp}
               className="flex flex-col sm:flex-row gap-4"
             >
-              <button onClick={handleCreateRoom} className="group relative bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-semibold py-4 px-8 rounded-xl text-center transition-all duration-300 hover:shadow-lg hover:shadow-violet-500/50 hover:scale-105">
-                <span className="relative z-10">Create a Room</span>
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-fuchsia-600 to-violet-600 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"
-                />
+              <button onClick={handleTryDemo} className="group relative bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-semibold py-4 px-8 rounded-xl text-center transition-all duration-300 hover:shadow-lg hover:shadow-violet-500/50 hover:scale-105">
+                Try Free Demo
               </button>
-              <button className="group border-2 border-slate-300 text-slate-700 hover:border-violet-600 hover:text-violet-600 font-semibold py-4 px-8 rounded-xl text-center transition-all duration-300 hover:shadow-md hover:scale-105 bg-white/50 backdrop-blur-sm">
-                Explore Features
+              <button onClick={handleSignIn} className="group border-2 border-slate-300 text-slate-700 hover:border-violet-600 hover:text-violet-600 font-semibold py-4 px-8 rounded-xl text-center transition-all duration-300 hover:shadow-md hover:scale-105 bg-white/50 backdrop-blur-sm">
+                Sign In
               </button>
             </motion.div>
 
@@ -307,10 +315,10 @@ const Home = () => {
           >
             <Users className="w-16 h-16 mx-auto mb-6" />
             <h2 className="text-4xl md:text-5xl font-bold mb-6">
-              Ready to Get Started?
+              Collaborate with Your Team
             </h2>
             <p className="text-xl mb-10 max-w-2xl mx-auto opacity-90">
-              Join thousands of teams already using IdeaBoard to power their collaboration
+              Create a room, invite teammates, and brainstorm together.
             </p>
             <button onClick={handleCreateRoom} className="inline-block bg-white text-violet-600 font-bold py-4 px-10 rounded-xl text-lg transition-all duration-300 hover:scale-105 hover:shadow-2xl">
               Create Your First Room

@@ -1,5 +1,8 @@
 import React from 'react';
 import { Plus, Copy, ArrowRight, CheckCircle, Sparkles, Users, Link as LinkIcon } from 'lucide-react';
+import { socket } from '@/socket';
+import { useEffect, useRef } from "react";
+
 
 interface CreateRoomProps {
     isLoading: boolean;
@@ -19,6 +22,35 @@ const CreateRoom: React.FC<CreateRoomProps> = ({
     copyLinkToClipboard,
 }) => {
     const roomLink = roomCode ? `${window.location.origin}/join/${roomCode}` : '';
+
+    const hasRestoredRef = useRef(false);
+
+    useEffect(() => {
+        if (!roomCode) return;
+        if (hasRestoredRef.current) return;
+
+        const demoData = sessionStorage.getItem("demo-whiteboard");
+        if (!demoData) return;
+
+        const parsed = JSON.parse(demoData);
+
+        // ✅ STEP 1: join socket room first
+        socket.emit("joinRoomChannel", {
+            roomCode,
+            userId: localStorage.getItem("userId"),
+        });
+
+        // ✅ STEP 2: restore demo into real room
+        socket.emit("whiteboard:restore", {
+            roomCode,
+            state: parsed,
+        });
+
+        sessionStorage.removeItem("demo-whiteboard");
+        hasRestoredRef.current = true;
+
+        console.log("✅ Demo restored into room:", roomCode);
+    }, [roomCode]);
 
     return (
         <div className='min-h-screen bg-gradient-to-br from-slate-50 via-white to-violet-50 px-4 py-12'>
