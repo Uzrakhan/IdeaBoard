@@ -36,7 +36,7 @@ const WhiteboardWrapper: React.FC= () => {
   if (error) return <div className="text-center text-red-600">Error: {error}</div>;
   if (!room) return <div className="text-center">Room not found !!!!!!</div>;
 
-  return <Whiteboard />;
+  return <Whiteboard mode={'room'} />;
 };
 
 export default WhiteboardWrapper;
