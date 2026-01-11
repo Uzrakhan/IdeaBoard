@@ -1156,6 +1156,32 @@ io.on('connection', (socket: Socket) => { // 'socket' here will infer type corre
     }
   });
 
+  socket.on("whiteboard:restore", async ({ roomCode, state }) => {
+    try {
+      const roomData = await getRoomData(roomCode);
+
+      // ✅ persist demo drawing
+      roomData.drawingLines = state.lines;
+
+      await saveRoomData(roomCode, roomData);
+
+      // ✅ send to everyone in room
+      io.to(roomCode).emit("initial-state", roomData.drawingLines);
+
+      // optional viewport sync
+      io.to(roomCode).emit("whiteboard:stateUpdate", {
+        pan: state.pan,
+        zoom: state.zoom
+      });
+
+      console.log(`✅ Demo restored into room ${roomCode}`);
+    } catch (err) {
+      console.error("❌ whiteboard:restore failed:", err);
+    }
+  });
+
+
+
   //2. `draw` event
   socket.on('draw', async(line: DrawingLine, roomCode: string) => {
     try{
@@ -1204,7 +1230,7 @@ io.on('connection', (socket: Socket) => { // 'socket' here will infer type corre
       roomData.drawingLines = [];
       
       await saveRoomData(roomCode, roomData);
-      io.to(roomCode).emit('initial-state',roomData.drawingLines);
+      io.to(roomCode).emit('clear');
       console.log(`Clear action processed for room ${roomCode}. Drawing lines are now empty.`);
     }catch(err) {
       console.error('DB write error (clear):', err);
@@ -1237,6 +1263,8 @@ io.on('connection', (socket: Socket) => { // 'socket' here will infer type corre
     console.log(`User ${userId} left room ${roomCode}.`);
   });
 });
+
+
 
 
 // --- IMPORT AND REGISTER ROUTES DIRECTLY HERE (MOVED FROM startServer function) ---
