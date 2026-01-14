@@ -16,6 +16,7 @@ import {
     Maximize2,
     MousePointer2,
     Type,
+    ArrowRight,
 } from 'lucide-react';
 import { socket } from '../socket';
 import { getRoom } from '../api';
@@ -32,7 +33,7 @@ type Point = { x: number; y: number };
 type DrawingLine = {
     sentTimestamp: any;
     id: string;
-    type: 'pen' | 'eraser' | 'rectangle' | 'circle' | 'text';
+    type: 'pen' | 'eraser' | 'rectangle' | 'circle' | 'text'|'arrow';
     points?: Point[];
     startPoint?: Point;
     endPoint?: Point;
@@ -48,7 +49,7 @@ interface WhiteboardProps {
 } 
 
 
-type ToolType = 'select' | 'hand' | 'pen' | 'eraser' | 'rectangle' | 'circle' | 'text';
+type ToolType = 'select' | 'hand' | 'pen' | 'eraser' | 'rectangle' | 'circle' | 'text' | 'arrow';
 
 
 const Whiteboard = ({ mode, roomCode }: WhiteboardProps) => {
@@ -81,7 +82,7 @@ const Whiteboard = ({ mode, roomCode }: WhiteboardProps) => {
     const [openPanel, setOpenPanel] = useState<string | null>(null);
     const [activeTextPos, setActiveTextPos] = useState<Point | null>(null);
     const [textValue, setTextValue] = useState("");
-    const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
+    const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
     const [eraserSize, setEraserSize] = useState(10);
     const [textFontSize, setTextFontSize] = useState(18);
     //const [showAuthModal, setShowAuthModal] = useState(false);
@@ -166,7 +167,7 @@ const Whiteboard = ({ mode, roomCode }: WhiteboardProps) => {
                         ctx.fillText(line.text, line.startPoint.x, line.startPoint.y);
 
                         //DRAW BLLUE HIGHLIGHT IF SELECTED
-                        if (line.id === selectedTextId) {
+                        if (line.id === selectedShapeId) {
                             const size = line.fontSize || 18;
                             const { width, height } = measureText(line.text, size);
 
@@ -191,6 +192,16 @@ const Whiteboard = ({ mode, roomCode }: WhiteboardProps) => {
                         ctx.stroke();
                     }
                     break;
+                case 'arrow':
+                    if (line.startPoint && line.endPoint) {
+                        drawArrow(
+                        ctx,
+                        line.startPoint,
+                        line.endPoint,
+                        line.color,
+                        );
+                    }
+                    break;
             }
         });
 
@@ -208,6 +219,77 @@ const Whiteboard = ({ mode, roomCode }: WhiteboardProps) => {
         };
     }, [pan.x, pan.y, zoom]);
 
+    const drawArrow = (
+        ctx: CanvasRenderingContext2D,
+        start: Point,
+        end: Point,
+        color: string
+    ) => {
+        const dx = end.x - start.x;
+        const dy = end.y - start.y;
+        const angle = Math.atan2(dy, dx);
+
+        // ⚠️ VERY IMPORTANT TUNING
+        const shaftWidth = 1.6;               // ← always thin
+        const headLength = 5.5;               // ← very small
+        const headAngle = Math.PI / 16;     // ← narrow & sharp
+
+        // shaft stops slightly before arrow head
+        const overlap = 0.5;
+        const shaftEndX = end.x - (headLength - overlap) * Math.cos(angle);
+        const shaftEndY = end.y - (headLength - overlap) * Math.sin(angle);
+
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = shaftWidth;
+        ctx.lineCap = "round";     // sharp ends
+        ctx.lineJoin = "round";
+
+        /* ===== SHAFT ===== */
+        ctx.beginPath();
+        ctx.moveTo(start.x, start.y);
+        ctx.lineTo(shaftEndX, shaftEndY);
+        ctx.stroke();
+
+        /* ===== OPEN ARROW HEAD ===== */
+        ctx.beginPath();
+        ctx.moveTo(end.x, end.y);
+        ctx.lineTo(
+            end.x - headLength * Math.cos(angle - headAngle),
+            end.y - headLength * Math.sin(angle - headAngle)
+        );
+
+        ctx.moveTo(end.x, end.y);
+        ctx.lineTo(
+            end.x - headLength * Math.cos(angle + headAngle),
+            end.y - headLength * Math.sin(angle + headAngle)
+        );
+        ctx.stroke();
+
+        ctx.restore();
+    };
+
+    const moveShape = (shape: DrawingLine, dx: number, dy: number) => {
+        if (shape.startPoint) {
+            shape.startPoint.x += dx;
+            shape.startPoint.y += dy;
+        }
+
+        if(shape.endPoint) {
+            shape.endPoint.x += dx;
+            shape.endPoint.y += dy;
+        }
+
+        if (shape.points) {
+            shape.points.forEach(p => {
+                p.x += dx;
+                p.y += dy;
+            })
+        }
+    }
+
+
+
     // ---------- EVENTS ----------
 
     const isDemo = mode === "demo";
@@ -219,8 +301,26 @@ const Whiteboard = ({ mode, roomCode }: WhiteboardProps) => {
                     (m) => m.user._id === currentUser._id && m.status === "approved"
                 )));
 
+    const isPointNearLine = (p: Point, a: Point,b: Point,threshold = 6
+        ) => {
+            const dx = b.x - a.x;
+            const dy = b.y - a.y;
+            const lengthSq = dx * dx + dy * dy;
+
+            if (lengthSq === 0) return false;
+
+            let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / lengthSq;
+            t = Math.max(0, Math.min(1, t));
+
+            const projX = a.x + t * dx;
+            const projY = a.y + t * dy;
+
+            const dist = Math.hypot(p.x - projX, p.y - projY);
+            return dist <= threshold;
+    };
 
     const handlePointerDown = useCallback((e: PointerEvent) => {
+        
         if (!canDraw && activeTool !== 'hand' && activeTool !== 'select') {
             toast.warn('You are not approved to draw.');
             return;
@@ -247,34 +347,79 @@ const Whiteboard = ({ mode, roomCode }: WhiteboardProps) => {
             // find topmost text item under cursor (loop backwards)
             for (let i = linesRef.current.length - 1; i >= 0; i--) {
                 const item = linesRef.current[i];
-                if (item.type !== "text" || !item.startPoint || !item.text) continue;
 
-                const { width, height } = measureText(item.text, item.fontSize || 18);
+                //TEXT
+                if (item.type === "text" && item.startPoint && item.text) {
+                    const { width, height } = measureText(item.text, item.fontSize || 18);
 
-                const x = item.startPoint.x;
-                const y = item.startPoint.y - (item.fontSize || 18);
+                    const x = item.startPoint.x;
+                    const y = item.startPoint.y - (item.fontSize || 18);
 
-                if (
-                    pt.x >= x &&
-                    pt.x <= x + width &&
-                    pt.y >= y &&
-                    pt.y <= y + height
-                ) {
-                    setSelectedTextId(item.id);
-                    setTextFontSize(item.fontSize || 18);
+                    if (pt.x >= x && pt.x <= x + width && pt.y >= y && pt.y <= y + height) {
+                        setSelectedShapeId(item.id);
+                        setTextFontSize(item.fontSize || 18);
 
-                    dragOffsetRef.current = {
-                        x: pt.x - x,
-                        y: pt.y - y
-                    };
-                    redrawCanvas()
-                    return;
+                        dragOffsetRef.current = {
+                            x: pt.x - x,
+                            y: pt.y - y
+                        };
+                        redrawCanvas()
+                        return;
+                    }
+                }
+
+                //RECT / CIRCLE / ARROW
+                // RECTANGLE
+if (item.type === "rectangle" && item.startPoint && item.endPoint) {
+    const x1 = Math.min(item.startPoint.x, item.endPoint.x);
+    const y1 = Math.min(item.startPoint.y, item.endPoint.y);
+    const x2 = Math.max(item.startPoint.x, item.endPoint.x);
+    const y2 = Math.max(item.startPoint.y, item.endPoint.y);
+
+    if (pt.x >= x1 && pt.x <= x2 && pt.y >= y1 && pt.y <= y2) {
+        setSelectedShapeId(item.id);
+        dragOffsetRef.current = pt;
+        return;
+    }
+}
+
+// CIRCLE
+if (item.type === "circle" && item.startPoint && item.endPoint) {
+    const dx = item.endPoint.x - item.startPoint.x;
+    const dy = item.endPoint.y - item.startPoint.y;
+    const r = Math.sqrt(dx * dx + dy * dy);
+
+    if (Math.hypot(pt.x - item.startPoint.x, pt.y - item.startPoint.y) <= r) {
+        setSelectedShapeId(item.id);
+        dragOffsetRef.current = pt;
+        return;
+    }
+}
+
+// ARROW
+if (item.type === "arrow" && item.startPoint && item.endPoint) {
+    if (isPointNearLine(pt, item.startPoint, item.endPoint)) {
+        setSelectedShapeId(item.id);
+        dragOffsetRef.current = pt;
+        return;
+    }
+}
+
+
+                //PEN /ERASER
+                if (item.points) {
+                    for(const p of item.points) {
+                        if (Math.hypot(pt.x - p.x, pt.y - p.y) < 6) {
+                            setSelectedShapeId(item.id);
+                            dragOffsetRef.current = pt;
+                            return;
+                        }
+                    }
                 }
             }
 
             // clicked empty area => clear selection
-            setSelectedTextId(null);
-            redrawCanvas()
+            setSelectedShapeId(null);
             return;
         }
 
@@ -302,22 +447,32 @@ const Whiteboard = ({ mode, roomCode }: WhiteboardProps) => {
         lastPointRef.current = point;
     }, [activeTool, getCanvasCoordinates, room, canDraw]);
 
+
+
     const handlePointerMove = useCallback((e: PointerEvent) => {
         if (activeTool === 'text' && activeTextPos) return;
 
-        if (activeTool === "select" && selectedTextId && dragOffsetRef.current) {
+        if (activeTool === "select" && selectedShapeId && dragOffsetRef.current) {
             const pt = getCanvasCoordinates(e);
+            const shape = linesRef.current.find(l => l.id === selectedShapeId);
+            if (!shape) return;
 
-            const item = linesRef.current.find(l => l.id === selectedTextId);
-            if (item && item.startPoint) {
-                item.startPoint = {
+            if (shape.type === "text" && shape.startPoint) {
+                shape.startPoint = {
                     x: pt.x - dragOffsetRef.current.x,
                     y: pt.y - dragOffsetRef.current.y
                 };
+            } else {
+                const dx = pt.x - dragOffsetRef.current.x;
+                const dy = pt.y - dragOffsetRef.current.y;
+                moveShape(shape, dx, dy);
+                dragOffsetRef.current = pt;
+            }
 
-                redrawCanvas();
+            redrawCanvas();
 
-                if (room) socket.emit("draw", item, room.roomCode);
+            if (!isDemo && room) {
+                socket.emit("draw", shape, room.roomCode)
             }
 
             return;
@@ -382,7 +537,8 @@ const Whiteboard = ({ mode, roomCode }: WhiteboardProps) => {
             );
         } else if (activeTool === 'rectangle' || activeTool === 'circle') {
             redrawCanvas();
-            const ctx2 = ctxRef.current!;
+            const ctx2 = ctxRef.current;
+            if (!ctx2) return;
             ctx2.save();
             ctx2.translate(pan.x, pan.y);
             ctx2.scale(zoom, zoom);
@@ -407,10 +563,36 @@ const Whiteboard = ({ mode, roomCode }: WhiteboardProps) => {
                 }
             }
             ctx2.restore();
+        } else if (activeTool === 'arrow') {
+            if (!startPointRef.current) return;
+            redrawCanvas();
+
+            const ctx2 = ctxRef.current;
+             if (!ctx2) return;
+
+
+            ctx2.save();
+            ctx2.translate(pan.x, pan.y);
+            ctx2.scale(zoom, zoom);
+
+            ctx2.strokeStyle = colorRef.current;
+            ctx2.fillStyle = colorRef.current;
+            ctx2.lineWidth = brushSizeRef.current;
+            ctx2.lineCap = "round";
+
+            drawArrow(
+                ctx2,
+                startPointRef.current,
+                point,
+                colorRef.current,
+            );
+
+            ctx2.restore()
+
         }
 
         lastPointRef.current = point;
-    }, [isDrawing, activeTool, getCanvasCoordinates, redrawCanvas, pan.x, pan.y, zoom, room, selectedTextId]);
+    }, [isDrawing, activeTool, getCanvasCoordinates, redrawCanvas, pan.x, pan.y, zoom, room, selectedShapeId]);
 
     const handlePointerUp = useCallback(() => {
         if (activeTool === 'text') return;
@@ -449,6 +631,26 @@ const Whiteboard = ({ mode, roomCode }: WhiteboardProps) => {
                 socket.emit('draw', newShape, effectiveRoomCode);
             }
 
+        }
+
+        if (activeTool === 'arrow') {
+            if (!startPointRef.current || !lastPointRef.current) return;
+
+            const newArrow: DrawingLine = {
+                id: crypto.randomUUID(),
+                type: 'arrow',
+                startPoint: startPointRef.current,
+                endPoint: lastPointRef.current,
+                color: colorRef.current,
+                width: brushSizeRef.current,
+                sentTimestamp: Date.now(),
+            };
+
+            linesRef.current.push(newArrow);
+
+            if (!isDemo && room && effectiveRoomCode) {
+                socket.emit('draw', newArrow, effectiveRoomCode);
+            }
         }
 
         startPointRef.current = null;
@@ -774,6 +976,8 @@ const Whiteboard = ({ mode, roomCode }: WhiteboardProps) => {
     }
 
     
+    //const drawCursor = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cline x1='16' y1='0' x2='16' y2='32' stroke='black' stroke-width='2'/%3E%3Cline x1='0' y1='16' x2='32' y2='16' stroke='black' stroke-width='2'/%3E%3C/svg%3E\") 16 16, crosshair";
+
 
 
     // ---------- JSX ----------
@@ -795,6 +999,7 @@ const Whiteboard = ({ mode, roomCode }: WhiteboardProps) => {
                     <ToolButton tool="pen" icon={Pen} label="Draw" />
                     <ToolButton tool="eraser" icon={Eraser} label="Eraser" />
                     <ToolButton tool='text' icon={Type} label='Text'/>
+                    <ToolButton tool='arrow' icon={ArrowRight}  label='Arrow'/>
 
                     <div className="h-6 w-px bg-gray-300" />
 
@@ -938,7 +1143,7 @@ const Whiteboard = ({ mode, roomCode }: WhiteboardProps) => {
                         ref={canvasRef}
                         className="absolute inset-0 z-0"
                         style={{
-                            cursor:
+                            cursor: 
                                 activeTool === "hand"
                                     ? "grab"
                                     : activeTool === "select"
