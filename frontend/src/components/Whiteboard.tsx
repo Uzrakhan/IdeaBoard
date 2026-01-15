@@ -97,6 +97,11 @@ const Whiteboard = ({ mode, roomCode }: WhiteboardProps) => {
     const isPanningRef = useRef(false);
     const lastPanPointRef = useRef<Point | null>(null);
     const dragOffsetRef = useRef<Point | null>(null);
+    const eraserHoverRef = useRef<Point | null>(null);
+    const lastEraseRef = useRef(0);
+    const ERASE_INTERVAL = 16;
+    const lastErasePointRef = useRef<Point | null>(null);
+
 
     // --- Color palette ---
     const strokeColors = [
@@ -288,6 +293,49 @@ const Whiteboard = ({ mode, roomCode }: WhiteboardProps) => {
         }
     }
 
+    const drawEraserPreview = (ctx: CanvasRenderingContext2D, p: Point, size: number) => {
+        ctx.save();
+        ctx.strokeStyle = "rgba(120,120,120,0.8)";
+        ctx.lineWidth = 1 / zoom;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, size / 2, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    const eraseAtPoint = (p: Point, radius: number) => {
+        linesRef.current = linesRef.current.filter(line => {
+            //TEXT
+            if (line.type === "text" && line.startPoint && line.text) {
+                const { width, height } = measureText(line.text, line.fontSize || 18);
+                const x = line.startPoint.x;
+                const y = line.startPoint.y - (line.fontSize || 18);
+
+                return !(
+                    p.x >= x - radius &&
+                    p.x <= x + width + radius &&
+                    p.y >= y - radius &&
+                    p.y <= y + height + radius
+                );
+            }
+
+            //SHAPES/ARROWS
+            if (line.startPoint && line.endPoint) {
+                return !isPointNearLine(p, line.startPoint, line.endPoint, radius);
+            }
+
+            //PEN STROEKS
+            if (line.points) {
+                line.points = line.points.filter(
+                    pt => Math.hypot(pt.x - p.x, pt.y - p.y) > radius
+                );
+                return line.points.length > 1;
+            }
+
+            return true;
+        })
+    }
+
 
 
     // ---------- EVENTS ----------
@@ -335,6 +383,11 @@ const Whiteboard = ({ mode, roomCode }: WhiteboardProps) => {
             return;
         }
 
+        if (activeTool === "eraser") {
+            setIsDrawing(true);
+            return;
+        }
+
         if (activeTool === 'hand') {
             isPanningRef.current = true;
             lastPanPointRef.current = { x: e.clientX, y: e.clientY };
@@ -370,40 +423,40 @@ const Whiteboard = ({ mode, roomCode }: WhiteboardProps) => {
 
                 //RECT / CIRCLE / ARROW
                 // RECTANGLE
-if (item.type === "rectangle" && item.startPoint && item.endPoint) {
-    const x1 = Math.min(item.startPoint.x, item.endPoint.x);
-    const y1 = Math.min(item.startPoint.y, item.endPoint.y);
-    const x2 = Math.max(item.startPoint.x, item.endPoint.x);
-    const y2 = Math.max(item.startPoint.y, item.endPoint.y);
+                if (item.type === "rectangle" && item.startPoint && item.endPoint) {
+                    const x1 = Math.min(item.startPoint.x, item.endPoint.x);
+                    const y1 = Math.min(item.startPoint.y, item.endPoint.y);
+                    const x2 = Math.max(item.startPoint.x, item.endPoint.x);
+                    const y2 = Math.max(item.startPoint.y, item.endPoint.y);
 
-    if (pt.x >= x1 && pt.x <= x2 && pt.y >= y1 && pt.y <= y2) {
-        setSelectedShapeId(item.id);
-        dragOffsetRef.current = pt;
-        return;
-    }
-}
+                    if (pt.x >= x1 && pt.x <= x2 && pt.y >= y1 && pt.y <= y2) {
+                        setSelectedShapeId(item.id);
+                        dragOffsetRef.current = pt;
+                        return;
+                    }
+                }
 
 // CIRCLE
-if (item.type === "circle" && item.startPoint && item.endPoint) {
-    const dx = item.endPoint.x - item.startPoint.x;
-    const dy = item.endPoint.y - item.startPoint.y;
-    const r = Math.sqrt(dx * dx + dy * dy);
+                if (item.type === "circle" && item.startPoint && item.endPoint) {
+                    const dx = item.endPoint.x - item.startPoint.x;
+                    const dy = item.endPoint.y - item.startPoint.y;
+                    const r = Math.sqrt(dx * dx + dy * dy);
 
-    if (Math.hypot(pt.x - item.startPoint.x, pt.y - item.startPoint.y) <= r) {
-        setSelectedShapeId(item.id);
-        dragOffsetRef.current = pt;
-        return;
-    }
-}
+                    if (Math.hypot(pt.x - item.startPoint.x, pt.y - item.startPoint.y) <= r) {
+                        setSelectedShapeId(item.id);
+                        dragOffsetRef.current = pt;
+                        return;
+                    }
+                }
 
 // ARROW
-if (item.type === "arrow" && item.startPoint && item.endPoint) {
-    if (isPointNearLine(pt, item.startPoint, item.endPoint)) {
-        setSelectedShapeId(item.id);
-        dragOffsetRef.current = pt;
-        return;
-    }
-}
+                if (item.type === "arrow" && item.startPoint && item.endPoint) {
+                    if (isPointNearLine(pt, item.startPoint, item.endPoint)) {
+                        setSelectedShapeId(item.id);
+                        dragOffsetRef.current = pt;
+                        return;
+                    }
+                }
 
 
                 //PEN /ERASER
@@ -427,15 +480,13 @@ if (item.type === "arrow" && item.startPoint && item.endPoint) {
 
         const point = getCanvasCoordinates(e);
 
-        if (activeTool === 'pen' || activeTool === 'eraser') {
+        if (activeTool === 'pen') {
             const newLine: DrawingLine ={
                 id: crypto.randomUUID(),
                 type: activeTool,
                 points: [point],
-                color: activeTool === 'eraser' ? '#FFFFFF' : colorRef.current,
-                width: activeTool === 'eraser'
-                    ? eraserSize
-                    : brushSizeRef.current,
+                color: colorRef.current,
+                width: brushSizeRef.current,
                 sentTimestamp: Date.now()
             }
             linesRef.current.push(newLine);
@@ -501,6 +552,46 @@ if (item.type === "arrow" && item.startPoint && item.endPoint) {
             return;
         }
 
+        if (activeTool === "eraser") {
+            const pt = getCanvasCoordinates(e);
+            eraserHoverRef.current = pt;
+
+            if (isDrawing) {
+                if (lastErasePointRef.current) {
+                    const d = Math.hypot(
+                        pt.x - lastErasePointRef.current.x,
+                        pt.y - lastErasePointRef.current.y
+                    )
+
+                    if (d < eraserSize / 3) return;
+                }
+
+                lastErasePointRef.current = pt;
+
+                // replacing with throttled version
+                const now = Date.now();
+                if (now - lastEraseRef.current > ERASE_INTERVAL) {
+                    eraseAtPoint(pt, eraserSize / 2);
+                    lastEraseRef.current = now;
+                }
+                
+
+                
+            }
+
+            redrawCanvas();
+
+            const ctx = ctxRef.current;
+            if (ctx) {
+                ctx.save();
+                ctx.translate(pan.x, pan.y);
+                ctx.scale(zoom, zoom);
+                drawEraserPreview(ctx, pt, eraserSize);
+                ctx.restore()
+            }
+            return;
+        }
+
         if (!isDrawing) return;
 
         const ctx = ctxRef.current;
@@ -509,7 +600,7 @@ if (item.type === "arrow" && item.startPoint && item.endPoint) {
 
         const point = getCanvasCoordinates(e);
 
-        if (activeTool === 'pen' || activeTool === 'eraser') {
+        if (activeTool === 'pen') {
             const lastLine = linesRef.current[linesRef.current.length - 1];
             lastLine.points!.push(point);
 
@@ -519,10 +610,6 @@ if (item.type === "arrow" && item.startPoint && item.endPoint) {
             ctx.translate(pan.x, pan.y);
             ctx.scale(zoom, zoom);
             ctx.beginPath();
-            ctx.lineWidth = activeTool === 'eraser'
-                ? eraserSize
-                : brushSizeRef.current;
-            ctx.strokeStyle = activeTool === 'eraser' ? '#FFFFFF' : colorRef.current;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
             ctx.moveTo(lastPoint.x, lastPoint.y);
@@ -608,6 +695,22 @@ if (item.type === "arrow" && item.startPoint && item.endPoint) {
             dragOffsetRef.current = null;
             return;
         }
+
+        if (activeTool === "eraser") {
+            setIsDrawing(false);
+            eraserHoverRef.current = null;
+            lastErasePointRef.current = null;
+            redrawCanvas();
+            
+            if (!isDemo && room && effectiveRoomCode) {
+                socket.emit("draw", {
+                    type: "bulkErase",
+                    lines: linesRef.current
+                }, effectiveRoomCode);
+            }
+            return;
+        }
+
 
         if (!isDrawing) return;
         setIsDrawing(false);
@@ -720,7 +823,6 @@ if (item.type === "arrow" && item.startPoint && item.endPoint) {
 
     // ---------- CLEAR ----------
     const clearBoard = () => {
-        if (!effectiveRoomCode) return;
 
         // demo mode → local only
         if (mode === "demo") {
@@ -728,6 +830,8 @@ if (item.type === "arrow" && item.startPoint && item.endPoint) {
             redrawCanvas();
             return;
         }
+
+        if (!effectiveRoomCode) return;
 
         // room mode → broadcast
         socket.emit("clear", effectiveRoomCode);
