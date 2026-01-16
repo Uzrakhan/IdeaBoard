@@ -1,6 +1,7 @@
 import { motion, type TargetAndTransition } from 'framer-motion';
 import { Sparkles, Zap, Users, Palette, Code, Layers } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import MiniBoardPreview from './MiniBoardPreview';
 
 const Home = () => {
 
@@ -158,8 +159,10 @@ const Home = () => {
               <div className="absolute inset-0 bg-gradient-to-br from-violet-500/30 to-fuchsia-500/30 rounded-2xl blur-2xl" />
               <div className="relative bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl shadow-2xl border border-slate-200/50 w-full h-80 flex items-center justify-center">
                 <div className="text-center p-8">
-                  <Palette className="w-16 h-16 mx-auto mb-4 text-violet-600" />
-                  <p className="text-slate-600 font-medium">Your IdeaBoard Preview</p>
+                  <MiniBoardPreview />
+<p className="text-slate-600 font-medium mt-4">
+  Live Whiteboard Preview
+</p>
                 </div>
               </div>
               {/* Decorative Elements */}

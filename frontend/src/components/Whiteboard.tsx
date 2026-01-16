@@ -17,6 +17,7 @@ import {
     MousePointer2,
     Type,
     ArrowRight,
+    Minus
 } from 'lucide-react';
 import { socket } from '../socket';
 import { getRoom } from '../api';
@@ -33,7 +34,7 @@ type Point = { x: number; y: number };
 type DrawingLine = {
     sentTimestamp: any;
     id: string;
-    type: 'pen' | 'eraser' | 'rectangle' | 'circle' | 'text'|'arrow';
+    type: 'pen' | 'eraser' | 'rectangle' | 'circle' | 'text'|'arrow' | 'line';
     points?: Point[];
     startPoint?: Point;
     endPoint?: Point;
@@ -49,7 +50,7 @@ interface WhiteboardProps {
 } 
 
 
-type ToolType = 'select' | 'hand' | 'pen' | 'eraser' | 'rectangle' | 'circle' | 'text' | 'arrow';
+type ToolType = 'select' | 'hand' | 'pen' | 'eraser' | 'rectangle' | 'circle' | 'text' | 'arrow' | 'line';
 
 
 const Whiteboard = ({ mode, roomCode }: WhiteboardProps) => {
@@ -207,6 +208,15 @@ const Whiteboard = ({ mode, roomCode }: WhiteboardProps) => {
                         );
                     }
                     break;
+                case 'line' :
+                    if (line.startPoint && line.endPoint) {
+                        ctx.beginPath();
+                        ctx.lineCap = "round";
+                        ctx.moveTo(line.startPoint.x, line.startPoint.y);
+                        ctx.lineTo(line.endPoint.x, line.endPoint.y);
+                        ctx.stroke()
+                    }
+                    break;
             }
         });
 
@@ -303,38 +313,44 @@ const Whiteboard = ({ mode, roomCode }: WhiteboardProps) => {
         ctx.restore();
     }
 
-    const eraseAtPoint = (p: Point, radius: number) => {
+    const eraseAtPoint = (p: Point, radius: number): string[] => {
+        const erasedIds: string[] = [];
+
         linesRef.current = linesRef.current.filter(line => {
-            //TEXT
+            let shouldErase = false;
+
             if (line.type === "text" && line.startPoint && line.text) {
                 const { width, height } = measureText(line.text, line.fontSize || 18);
                 const x = line.startPoint.x;
                 const y = line.startPoint.y - (line.fontSize || 18);
 
-                return !(
+                shouldErase =
                     p.x >= x - radius &&
                     p.x <= x + width + radius &&
                     p.y >= y - radius &&
-                    p.y <= y + height + radius
-                );
+                    p.y <= y + height + radius;
             }
 
-            //SHAPES/ARROWS
             if (line.startPoint && line.endPoint) {
-                return !isPointNearLine(p, line.startPoint, line.endPoint, radius);
+                shouldErase = isPointNearLine(p, line.startPoint, line.endPoint, radius);
             }
 
-            //PEN STROEKS
             if (line.points) {
+                const before = line.points.length;
                 line.points = line.points.filter(
                     pt => Math.hypot(pt.x - p.x, pt.y - p.y) > radius
                 );
-                return line.points.length > 1;
+                shouldErase = before !== line.points.length;
             }
 
-            return true;
-        })
-    }
+            if (shouldErase) erasedIds.push(line.id);
+
+            return !shouldErase;
+        });
+
+        return erasedIds;
+    };
+
 
 
 
@@ -436,7 +452,7 @@ const Whiteboard = ({ mode, roomCode }: WhiteboardProps) => {
                     }
                 }
 
-// CIRCLE
+                // CIRCLE
                 if (item.type === "circle" && item.startPoint && item.endPoint) {
                     const dx = item.endPoint.x - item.startPoint.x;
                     const dy = item.endPoint.y - item.startPoint.y;
@@ -449,8 +465,17 @@ const Whiteboard = ({ mode, roomCode }: WhiteboardProps) => {
                     }
                 }
 
-// ARROW
+                // ARROW
                 if (item.type === "arrow" && item.startPoint && item.endPoint) {
+                    if (isPointNearLine(pt, item.startPoint, item.endPoint)) {
+                        setSelectedShapeId(item.id);
+                        dragOffsetRef.current = pt;
+                        return;
+                    }
+                }
+
+                //LINE
+                if (item.type === "line" && item.startPoint && item.endPoint) {
                     if (isPointNearLine(pt, item.startPoint, item.endPoint)) {
                         setSelectedShapeId(item.id);
                         dragOffsetRef.current = pt;
@@ -572,6 +597,14 @@ const Whiteboard = ({ mode, roomCode }: WhiteboardProps) => {
                 const now = Date.now();
                 if (now - lastEraseRef.current > ERASE_INTERVAL) {
                     eraseAtPoint(pt, eraserSize / 2);
+
+                    if (!isDemo && room && effectiveRoomCode) {
+                            socket.emit("whiteboard:sync", {
+                                roomCode: effectiveRoomCode,
+                                lines: linesRef.current
+                        });
+                        console.log("📤 EMITTED SYNC", linesRef.current.length);
+                    }
                     lastEraseRef.current = now;
                 }
                 
@@ -676,6 +709,28 @@ const Whiteboard = ({ mode, roomCode }: WhiteboardProps) => {
 
             ctx2.restore()
 
+        } else if (activeTool === 'line') {
+            if (!startPointRef.current) return;
+
+            redrawCanvas();
+
+            const ctx2 = ctxRef.current;
+            if (!ctx2) return;
+
+            ctx2.save();
+            ctx2.translate(pan.x, pan.y);
+            ctx2.scale(zoom, zoom);
+
+            ctx2.strokeStyle = colorRef.current;
+            ctx2.lineWidth = brushSizeRef.current;
+            ctx2.lineCap = "round";
+
+            ctx2.beginPath()
+            ctx2.moveTo(startPointRef.current.x, startPointRef.current.y)
+            ctx2.lineTo(point.x, point.y)
+            ctx2.stroke()
+
+            ctx2.restore()
         }
 
         lastPointRef.current = point;
@@ -702,12 +757,7 @@ const Whiteboard = ({ mode, roomCode }: WhiteboardProps) => {
             lastErasePointRef.current = null;
             redrawCanvas();
             
-            if (!isDemo && room && effectiveRoomCode) {
-                socket.emit("draw", {
-                    type: "bulkErase",
-                    lines: linesRef.current
-                }, effectiveRoomCode);
-            }
+            
             return;
         }
 
@@ -753,6 +803,26 @@ const Whiteboard = ({ mode, roomCode }: WhiteboardProps) => {
 
             if (!isDemo && room && effectiveRoomCode) {
                 socket.emit('draw', newArrow, effectiveRoomCode);
+            }
+        }
+
+        if (activeTool === 'line') {
+            if (!startPointRef.current || !lastPointRef.current) return;
+
+            const newLine: DrawingLine = {
+                id: crypto.randomUUID(),
+                type: 'line',
+                startPoint: startPointRef.current,
+                endPoint: lastPointRef.current,
+                color: colorRef.current,
+                width: brushSizeRef.current,
+                sentTimestamp: Date.now()
+            };
+
+            linesRef.current.push(newLine);
+
+            if (!isDemo && room && effectiveRoomCode) {
+                socket.emit('draw', newLine, effectiveRoomCode)
             }
         }
 
@@ -925,7 +995,7 @@ const Whiteboard = ({ mode, roomCode }: WhiteboardProps) => {
 
   console.log("🟢 Joined socket room:", effectiveRoomCode);
 
-}, [effectiveRoomCode, currentUser]);
+    }, [effectiveRoomCode, currentUser]);
 
     useEffect(() => {
   const handleJoinRequest = (data: any) => {
@@ -938,13 +1008,14 @@ const Whiteboard = ({ mode, roomCode }: WhiteboardProps) => {
   return () => {
     socket.off("room:joinRequest", handleJoinRequest);
   };
-}, []);
+    }, []);
 
 
     // ⬇️ When someone joins and is not approved → they create a join request
     useEffect(() => {
         if (!socket.connected) socket.connect();
 
+        /*
         socket.on("connect", () => {
             console.log("Socket connected: ", socket.id);
 
@@ -955,8 +1026,10 @@ const Whiteboard = ({ mode, roomCode }: WhiteboardProps) => {
                 })
             }
         });
+        */
 
         socket.on("initial-state", (lines) => {
+            console.log("📥 CLIENT RECEIVED STATE", lines.length);
             linesRef.current = lines;
             redrawCanvas();
         });
@@ -979,6 +1052,13 @@ const Whiteboard = ({ mode, roomCode }: WhiteboardProps) => {
             if (pan) setPan(pan);
             if (zoom) setZoom(zoom);
         });
+
+        socket.on("whiteboard:sync", ({ lines }) => {
+            console.log("📥 CLIENT RECEIVED SYNC", lines.length);
+            linesRef.current = [...lines];
+            redrawCanvas();
+        });
+
 
 
 
@@ -1012,6 +1092,7 @@ const Whiteboard = ({ mode, roomCode }: WhiteboardProps) => {
             socket.off("draw");
             socket.off("clear");
             socket.off("initial-state");
+            socket.off("whiteboard:sync")
             socket.off("roomUpdated");
             socket.off("room:joinRequest");
             socket.off("yourRoomStatusUpdated");
@@ -1104,6 +1185,7 @@ const Whiteboard = ({ mode, roomCode }: WhiteboardProps) => {
                     <ToolButton tool="eraser" icon={Eraser} label="Eraser" />
                     <ToolButton tool='text' icon={Type} label='Text'/>
                     <ToolButton tool='arrow' icon={ArrowRight}  label='Arrow'/>
+                    <ToolButton tool='line' icon={Minus} label='line'/>
 
                     <div className="h-6 w-px bg-gray-300" />
 
